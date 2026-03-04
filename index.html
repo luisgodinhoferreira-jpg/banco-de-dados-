@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Primeiro Olá Mundo Estelar</title>
+    <title>Mundo das Bandeiras</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* Fundo azul escuro profundo */
             background-color: #0b0d17; 
-            /* Criando estrelas com múltiplos gradientes radiais */
             background-image: 
                 radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
                 radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
@@ -22,37 +20,76 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden; /* Evita barras de rolagem se houver muitas bandeiras */
+            cursor: crosshair; /* Muda o mouse para uma mira */
         }
 
         .card {
-            background-color: rgba(255, 255, 255, 0.9); /* Leve transparência para o card */
+            background-color: rgba(255, 255, 255, 0.9);
             padding: 2.5rem;
             border-radius: 16px;
             box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
             text-align: center;
-            backdrop-filter: blur(5px); /* Efeito de vidro fosco */
+            backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.3);
+            z-index: 10; /* Garante que o card fique na frente das bandeiras */
+            pointer-events: auto; 
         }
 
-        h1 {
-            color: #2d3436;
-            margin: 0;
-            font-size: 2.5rem;
+        /* Estilo da bandeira que será criada */
+        .bandeira {
+            position: absolute;
+            font-size: 2rem;
+            user-select: none;
+            pointer-events: none; /* Evita que a bandeira atrapalhe novos cliques */
+            animation: aparecer 0.5s ease-out;
         }
 
-        p {
-            color: #636e72;
-            margin-top: 10px;
-            font-weight: 500;
-        } 
+        @keyframes aparecer {
+            from { transform: scale(0) rotate(-45deg); opacity: 0; }
+            to { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        h1 { color: #2d3436; margin: 0; font-size: 2.5rem; }
+        p { color: #636e72; margin-top: 10px; font-weight: 500; } 
     </style>
 </head>
 <body>
 
     <div class="card">
         <h1>Olá, Mundo! 🌎</h1>
-        <p>Meu primeiro projeto com HTML e CSS.</p>
+        <p>Clique em qualquer lugar para espalhar bandeiras!</p>
     </div>
+
+    <script>
+        // Lista de emojis de bandeiras
+        const bandeiras = ['🇧🇷', '🇵🇹', '🇺🇸', '🇯🇵', '🇦🇷', '🇨🇦', '🇫🇷', '🇩🇪', '🇮🇹', '🇰🇷'];
+
+        document.addEventListener('click', (evento) => {
+            // Cria o elemento da bandeira
+            const span = document.createElement('span');
+            span.className = 'bandeira';
+            
+            // Escolhe uma bandeira aleatória da lista
+            const bandeiraAleatoria = bandeiras[Math.floor(Math.random() * bandeiras.length)];
+            span.innerText = bandeiraAleatoria;
+
+            // Define a posição baseada no clique do mouse
+            // Subtraímos 20px para centralizar o emoji no cursor
+            span.style.left = (evento.clientX - 20) + 'px';
+            span.style.top = (evento.clientY - 20) + 'px';
+
+            // Adiciona a bandeira ao corpo da página
+            document.body.appendChild(span);
+
+            // Opcional: Remove a bandeira depois de 3 segundos para não pesar a página
+            setTimeout(() => {
+                span.style.transition = "opacity 1s";
+                span.style.opacity = "0";
+                setTimeout(() => span.remove(), 1000);
+            }, 3000);
+        });
+    </script>
 
 </body>
 </html>
