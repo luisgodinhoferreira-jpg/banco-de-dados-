@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olá Mundo! Estelar</title>
+    <title>Olá Mundo! Estelar Neon</title>
     
     <style>
         body {
@@ -13,7 +13,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Fundo Gradiente Espacial */
             background-color: #0b101a;
             background-image: 
                 radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
@@ -25,25 +24,47 @@
         }
 
         .card {
-            /* Fundo branco com leve transparência (efeito glassmorphism) */
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: rgba(10, 15, 30, 0.8); /* Escureci o card para o neon brilhar mais */
             padding: 2.5rem;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
             text-align: center;
-            backdrop-filter: blur(5px); /* Desfoca levemente o fundo atrás do card */
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         h1 {
-            color: #1a2a6c;
+            color: #fff;
             margin-bottom: 10px;
-            font-size: 2rem;
+            font-size: 3rem;
+            text-transform: uppercase;
+            /* Efeito Neon Multi-camadas */
+            text-shadow: 
+                0 0 7px #fff,
+                0 0 10px #fff,
+                0 0 21px #fff,
+                0 0 42px #0fa,
+                0 0 82px #0fa,
+                0 0 92px #0fa,
+                0 0 102px #0fa,
+                0 0 151px #0fa;
+            animation: flicker 1.5s infinite alternate; /* Opcional: faz a luz piscar levemente */
+        }
+
+        /* Animação para o neon parecer real (opcional) */
+        @keyframes flicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% {
+                text-shadow: 0 0 4px #fff, 0 0 11px #fff, 0 0 19px #fff, 0 0 40px #0fa, 0 0 80px #0fa;
+            }
+            20%, 24%, 55% {        
+                text-shadow: none;
+            }
         }
 
         p {
-            color: #444;
+            color: #ccc;
             font-weight: 500;
+            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -51,7 +72,7 @@
 
     <div class="card">
         <h1>Olá, Mundo!</h1>
-        <p>Meu primeiro projeto com um toque espacial. ✨</p>
+        <p>A fronteira final do design.</p>
     </div>
 
 </body>
