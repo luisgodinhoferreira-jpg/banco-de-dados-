@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #05070a; /* Fundo levemente mais escuro para o neon destacar */
+            background-color: #05070a;
             background-image: 
                 radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
                 radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
@@ -25,83 +25,27 @@
         }
 
         .card {
-            background-color: rgba(10, 20, 40, 0.8); /* Fundo escuro translúcido */
+            background-color: rgba(10, 20, 40, 0.8);
             padding: 2.5rem;
             border-radius: 16px;
             text-align: center;
             backdrop-filter: blur(10px);
-            
-            /* Efeito Neon Azul no Card */
             border: 1px solid #00d4ff;
             box-shadow: 0 0 15px rgba(0, 212, 255, 0.4), 
                         inset 0 0 15px rgba(0, 212, 255, 0.2);
-            
             z-index: 10;
             pointer-events: auto; 
         }
 
-        .bandeira {
-            position: absolute;
-            font-size: 2.5rem;
-            user-select: none;
-            pointer-events: none;
-            animation: aparecer 0.5s ease-out;
-            
-            /* Efeito Neon nas Bandeiras */
-            filter: drop-shadow(0 0 8px #00d4ff);
-        }
-
-        @keyframes aparecer {
-            from { transform: scale(0) rotate(-45deg); opacity: 0; }
-            to { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-
-        /* Cores de texto ajustadas para o tema neon */
-        h1 { 
+        /* Estilo para o link no título */
+        .card h1 a {
             color: #fff; 
-            margin: 0; 
-            font-size: 2.5rem; 
+            text-decoration: none; /* Remove o sublinhado padrão */
+            display: block;
             text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
+            transition: transform 0.3s ease;
         }
 
-        p { 
-            color: #00d4ff; 
-            margin-top: 10px; 
-            font-weight: 500; 
-            text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
-        } 
-    </style>
-</head>
-<body>
-
-    <div class="card">
-        <h1>Olá, Mundo! 🌎</h1>
-        <p>Clique para iluminar o mapa!</p>
-    </div>
-
-    <script>
-        const bandeiras = ['🇧🇷', '🇵🇹', '🇺🇸', '🇯🇵', '🇦🇷', '🇨🇦', '🇫🇷', '🇩🇪', '🇮🇹', '🇰🇷'];
-
-        document.addEventListener('click', (evento) => {
-            const span = document.createElement('span');
-            span.className = 'bandeira';
-            
-            const bandeiraAleatoria = bandeiras[Math.floor(Math.random() * bandeiras.length)];
-            span.innerText = bandeiraAleatoria;
-
-            span.style.left = (evento.clientX - 25) + 'px';
-            span.style.top = (evento.clientY - 25) + 'px';
-
-            document.body.appendChild(span);
-
-            setTimeout(() => {
-                span.style.transition = "opacity 1s, transform 1s";
-                span.style.opacity = "0";
-                span.style.transform = "translateY(-20px) scale(1.2)";
-                setTimeout(() => span.remove(), 1000);
-            }, 2000);
-        });
-    </script>
-
-</body>
-</html>
+        .card h1 a:hover {
+            transform: scale(1.05); /* Pequeno efeito ao passar o mouse */
+            text-shadow: 0 0 15px #00d4ff, 0 0 30px #00d4ff;
