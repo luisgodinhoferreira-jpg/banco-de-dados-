@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mundo das Bandeiras</title>
+    <title>Mundo das Bandeiras - Neon Edition</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0b0d17; 
+            background-color: #05070a; /* Fundo levemente mais escuro para o neon destacar */
             background-image: 
                 radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
                 radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
@@ -20,29 +20,35 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            overflow: hidden; /* Evita barras de rolagem se houver muitas bandeiras */
-            cursor: crosshair; /* Muda o mouse para uma mira */
+            overflow: hidden;
+            cursor: crosshair;
         }
 
         .card {
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(10, 20, 40, 0.8); /* Fundo escuro translúcido */
             padding: 2.5rem;
             border-radius: 16px;
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
             text-align: center;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            z-index: 10; /* Garante que o card fique na frente das bandeiras */
+            backdrop-filter: blur(10px);
+            
+            /* Efeito Neon Azul no Card */
+            border: 1px solid #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4), 
+                        inset 0 0 15px rgba(0, 212, 255, 0.2);
+            
+            z-index: 10;
             pointer-events: auto; 
         }
 
-        /* Estilo da bandeira que será criada */
         .bandeira {
             position: absolute;
-            font-size: 2rem;
+            font-size: 2.5rem;
             user-select: none;
-            pointer-events: none; /* Evita que a bandeira atrapalhe novos cliques */
+            pointer-events: none;
             animation: aparecer 0.5s ease-out;
+            
+            /* Efeito Neon nas Bandeiras */
+            filter: drop-shadow(0 0 8px #00d4ff);
         }
 
         @keyframes aparecer {
@@ -50,44 +56,50 @@
             to { transform: scale(1) rotate(0deg); opacity: 1; }
         }
 
-        h1 { color: #2d3436; margin: 0; font-size: 2.5rem; }
-        p { color: #636e72; margin-top: 10px; font-weight: 500; } 
+        /* Cores de texto ajustadas para o tema neon */
+        h1 { 
+            color: #fff; 
+            margin: 0; 
+            font-size: 2.5rem; 
+            text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
+        }
+
+        p { 
+            color: #00d4ff; 
+            margin-top: 10px; 
+            font-weight: 500; 
+            text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+        } 
     </style>
 </head>
 <body>
 
     <div class="card">
         <h1>Olá, Mundo! 🌎</h1>
-        <p>Clique em qualquer lugar para espalhar bandeiras!</p>
+        <p>Clique para iluminar o mapa!</p>
     </div>
 
     <script>
-        // Lista de emojis de bandeiras
         const bandeiras = ['🇧🇷', '🇵🇹', '🇺🇸', '🇯🇵', '🇦🇷', '🇨🇦', '🇫🇷', '🇩🇪', '🇮🇹', '🇰🇷'];
 
         document.addEventListener('click', (evento) => {
-            // Cria o elemento da bandeira
             const span = document.createElement('span');
             span.className = 'bandeira';
             
-            // Escolhe uma bandeira aleatória da lista
             const bandeiraAleatoria = bandeiras[Math.floor(Math.random() * bandeiras.length)];
             span.innerText = bandeiraAleatoria;
 
-            // Define a posição baseada no clique do mouse
-            // Subtraímos 20px para centralizar o emoji no cursor
-            span.style.left = (evento.clientX - 20) + 'px';
-            span.style.top = (evento.clientY - 20) + 'px';
+            span.style.left = (evento.clientX - 25) + 'px';
+            span.style.top = (evento.clientY - 25) + 'px';
 
-            // Adiciona a bandeira ao corpo da página
             document.body.appendChild(span);
 
-            // Opcional: Remove a bandeira depois de 3 segundos para não pesar a página
             setTimeout(() => {
-                span.style.transition = "opacity 1s";
+                span.style.transition = "opacity 1s, transform 1s";
                 span.style.opacity = "0";
+                span.style.transform = "translateY(-20px) scale(1.2)";
                 setTimeout(() => span.remove(), 1000);
-            }, 3000);
+            }, 2000);
         });
     </script>
 
