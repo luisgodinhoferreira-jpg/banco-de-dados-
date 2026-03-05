@@ -3,35 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olá Mundo!</title>
+    <title>Olá Mundo! Estelar</title>
     
     <style>
-        /* Aqui começa o CSS */
         body {
             font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
+            margin: 0;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            /* Fundo Gradiente Espacial */
+            background-color: #0b101a;
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+                radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px),
+                radial-gradient(rgba(255,255,255,.4), rgba(255,255,255,.1) 2px, transparent 30px);
+            background-size: 550px 550px, 350px 350px, 250px 250px, 150px 150px;
+            background-position: 0 0, 40px 60px, 130px 270px, 70px 100px;
         }
 
         .card {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            /* Fundo branco com leve transparência (efeito glassmorphism) */
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             text-align: center;
+            backdrop-filter: blur(5px); /* Desfoca levemente o fundo atrás do card */
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         h1 {
-            color: #4A90E2;
+            color: #1a2a6c;
             margin-bottom: 10px;
+            font-size: 2rem;
         }
 
         p {
-            color: #666;
+            color: #444;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -39,7 +51,7 @@
 
     <div class="card">
         <h1>Olá, Mundo!</h1>
-        <p>Meu primeiro projeto com HTML e CSS.</p>
+        <p>Meu primeiro projeto com um toque espacial. ✨</p>
     </div>
 
 </body>
