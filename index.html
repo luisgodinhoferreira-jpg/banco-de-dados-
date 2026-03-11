@@ -1,12 +1,17 @@
 
-      <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futebol Estelar Neon</title>
+    <title>Futebol Estelar Neon | Luis Gustavo</title>
     
     <style>
+        :root {
+            --neon-color: #0fa;
+            --neon-glow: rgba(0, 255, 170, 0.4);
+        }
+
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             margin: 0;
@@ -15,117 +20,176 @@
             justify-content: center;
             align-items: center;
             background-color: #0b101a;
-            /* Imagem de fundo do estádio com overlay escuro */
             background-image: 
-                linear-gradient(rgba(11, 16, 26, 0.85), rgba(11, 16, 26, 0.85)), 
-                url('https://images.unsplash.com/photo-1543477380-60b6d27431e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NDVjMDJ8MHwxfHNlYXJjaHw1fHxmdXRib2xsJTIwc3RhZGl1bXxlbnwwfHx8fDE3MTgxODU0OTF8MA&ixlib=rb-4.0.3&q=80&w=1080');
+                linear-gradient(rgba(11, 16, 26, 0.8), rgba(11, 16, 26, 0.9)), 
+                url('https://images.unsplash.com/photo-1543477380-60b6d27431e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
             color: white;
             padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* EFEITO ESPECIAL 1: Partículas Flutuantes de Fundo */
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.1;
+            animation: stars-move 100s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes stars-move {
+            from { transform: translateY(0); }
+            to { transform: translateY(-1000px); }
         }
 
         .card {
-            background-color: rgba(10, 15, 30, 0.9);
+            background-color: rgba(10, 15, 30, 0.85);
             padding: 2.5rem;
             border-radius: 20px;
-            box-shadow: 0 0 70px rgba(0, 255, 170, 0.2);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 255, 170, 0.05);
             text-align: center;
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 170, 0.3);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(0, 255, 170, 0.2);
             max-width: 550px;
             width: 100%;
-            animation: card-entry 1s ease-out;
+            position: relative;
+            z-index: 1;
+            overflow: hidden; /* Necessário para o efeito de brilho */
+            animation: card-entry 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* EFEITO ESPECIAL 2: Varredura de Luz (Shiny Effect) */
+        .card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: -150%;
+            width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            transform: skewX(-25deg);
+            animation: shine 6s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -150%; }
+            20% { left: 150%; }
+            100% { left: 150%; }
         }
 
         @keyframes card-entry {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: scale(0.9) translateY(50px); filter: blur(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
         }
 
-        .title-link {
-            text-decoration: none;
-            display: inline-block;
-        }
+        .title-link { text-decoration: none; display: inline-block; }
 
         h1 {
             color: #fff;
             margin-bottom: 5px;
             font-size: 2.8rem;
             text-transform: uppercase;
-            text-shadow: 0 0 15px #0fa, 0 0 30px #0fa;
-            animation: flicker 2s infinite alternate;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px var(--neon-color), 0 0 20px var(--neon-color);
+            animation: flicker 3s infinite alternate;
         }
 
         @keyframes flicker {
-            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-                text-shadow: 0 0 12px #fff, 0 0 25px #0fa, 0 0 40px #0fa;
-            }
-            20%, 22%, 24%, 55% { text-shadow: none; opacity: 0.85; }
+            0%, 18%, 22%, 25%, 53%, 57%, 100% { text-shadow: 0 0 10px #fff, 0 0 20px var(--neon-color), 0 0 40px var(--neon-color); }
+            20%, 24%, 55% { text-shadow: none; opacity: 0.7; }
         }
 
         .tabela-jogos {
             width: 100%;
             margin: 25px 0;
             border-collapse: collapse;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .tabela-jogos th {
-            border-bottom: 2px solid #0fa;
-            padding: 12px;
-            color: #0fa;
+            border-bottom: 2px solid var(--neon-color);
+            padding: 15px;
+            color: var(--neon-color);
             text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
             background-color: rgba(0, 255, 170, 0.05);
         }
 
         .tabela-jogos td {
             padding: 15px 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: 0.3s;
         }
 
-        .time { font-weight: bold; color: #fff; }
-        .vs { color: #0fa; font-size: 0.8rem; margin: 0 8px; }
+        .tabela-jogos tr:hover td {
+            background: rgba(0, 255, 170, 0.05);
+            color: var(--neon-color);
+        }
+
+        /* EFEITO ESPECIAL 3: Pulso nos nomes dos times */
+        .time { 
+            font-weight: bold; 
+            color: #fff; 
+            text-shadow: 0 0 5px rgba(255,255,255,0.2);
+        }
+        
+        tr:hover .time {
+            animation: pulse-text 1s infinite;
+        }
+
+        @keyframes pulse-text {
+            0% { text-shadow: 0 0 5px var(--neon-color); }
+            50% { text-shadow: 0 0 15px var(--neon-color); }
+            100% { text-shadow: 0 0 5px var(--neon-color); }
+        }
+
+        .vs { color: var(--neon-color); font-size: 0.7rem; margin: 0 8px; opacity: 0.8; }
 
         .btn-neon {
             display: inline-block;
-            padding: 12px 30px;
-            color: #0fa;
+            padding: 14px 35px;
+            color: var(--neon-color);
             text-decoration: none;
-            border: 2px solid #0fa;
-            border-radius: 30px;
+            border: 2px solid var(--neon-color);
+            border-radius: 50px;
             font-weight: bold;
             text-transform: uppercase;
-            transition: 0.4s;
-            box-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
-            margin-bottom: 20px;
+            transition: 0.5s;
+            box-shadow: 0 0 15px var(--neon-glow);
+            margin-bottom: 10px;
+            position: relative;
         }
 
         .btn-neon:hover {
-            background-color: #0fa;
+            background-color: var(--neon-color);
             color: #0b101a;
-            box-shadow: 0 0 40px #0fa;
-            transform: translateY(-3px);
+            box-shadow: 0 0 40px var(--neon-color);
+            transform: scale(1.05);
         }
 
-        /* Créditos do Desenvolvedor */
         .footer-credit {
-            margin-top: 20px;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.4);
-            letter-spacing: 2px;
+            margin-top: 25px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 3px;
             text-transform: uppercase;
-            border-top: 1px solid rgba(0, 255, 170, 0.1);
-            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 20px;
         }
 
         .footer-credit span {
-            color: #0fa;
+            color: var(--neon-color);
             font-weight: bold;
-            text-shadow: 0 0 5px rgba(0, 255, 170, 0.5);
+            text-shadow: 0 0 8px var(--neon-glow);
         }
     </style>
 </head>
@@ -136,29 +200,29 @@
             <h1>FUTEBOL ESTELAR</h1>
         </a>
         
-        <p style="color: #bbb; margin-top: 0;">Próximas Partidas</p>
+        <p style="color: #888; margin-top: 0; font-size: 0.9rem; letter-spacing: 1px;">SISTEMA MONITORADO</p>
 
         <table class="tabela-jogos">
             <thead>
                 <tr>
-                    <th>Data</th>
-                    <th>Confronto</th>
-                    <th>Horário</th>
+                    <th>STATUS</th>
+                    <th>CONFRONTO</th>
+                    <th>HORÁRIO</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>Hoje</td>
+                    <td style="color: #ff4d4d; font-size: 0.7rem;">● AO VIVO</td>
                     <td><span class="time">FLA</span> <span class="vs">VS</span> <span class="time">PAL</span></td>
                     <td>21:30</td>
                 </tr>
                 <tr>
-                    <td>Amanhã</td>
+                    <td>AGENDADO</td>
                     <td><span class="time">COR</span> <span class="vs">VS</span> <span class="time">SAO</span></td>
                     <td>16:00</td>
                 </tr>
                 <tr>
-                    <td>Qui, 20</td>
+                    <td>AGENDADO</td>
                     <td><span class="time">GRE</span> <span class="vs">VS</span> <span class="time">INT</span></td>
                     <td>20:00</td>
                 </tr>
@@ -166,11 +230,11 @@
         </table>
         
         <a href="https://ge.globo.com/futebol/brasileirao-serie-a/" target="_blank" class="btn-neon">
-            Ver Tabela Completa
+            ACESSAR DATA CENTER
         </a>
 
         <div class="footer-credit">
-            Desenvolvido por <span>Luis Gustavo</span>
+            Lead Developer: <span>Luis Gustavo</span>
         </div>
     </div>
 
