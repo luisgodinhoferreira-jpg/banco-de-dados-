@@ -1,193 +1,190 @@
+
 <!DOCTYPE html>
-
 <html lang="pt-br">
-
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Racer | Desenvolvido por Luis Gustavo</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0b101a;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-    <meta charset="UTF-8">
+        h1 {
+            text-shadow: 0 0 10px #0fa;
+            color: #0fa;
+            margin: 10px 0;
+        }
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        #gameCanvas {
+            border: 2px solid #0fa;
+            background: #111;
+            box-shadow: 0 0 20px rgba(0, 255, 170, 0.2);
+            border-radius: 10px;
+        }
 
-    <title>Neon Racer | Desenvolvido por Luis Gustavo</title>
+        .ui {
+            margin-top: 15px;
+            text-align: center;
+        }
 
-    <style>
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+        }
 
-        body {
-
-            margin: 0;
-
-            background-color: #0b101a;
-
-            color: white;
-
-            font-family: 'Segoe UI', sans-serif;
-
-            display: flex;
-
-            flex-direction: column;
-
-            align-items: center;
-
-            justify-content: center;
-
-            height: 100vh;
-
-            overflow: hidden;
-
-        }
-
-
-
-        h1 {
-
-            text-shadow: 0 0 10px #0fa;
-
-            color: #0fa;
-
-            margin: 10px 0;
-
-        }
-
-
-
-        #gameCanvas {
-
-            border: 2px solid #0fa;
-
-            background: #111;
-
-            box-shadow: 0 0 20px rgba(0, 255, 170, 0.2);
-
-            border-radius: 10px;
-
-        }
-
-
-
-        .ui {
-
-            margin-top: 15px;
-
-            text-align: center;
-
-        }
-
-
-
-        .score {
-
-            font-size: 24px;
-
-            font-weight: bold;
-
-            color: #fff;
-
-        }
-
-
-
-        .footer {
-
-            margin-top: 10px;
-
-            font-size: 0.8rem;
-
-            opacity: 0.6;
-
-        }
-
-    </style>
-
+        .footer {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+    </style>
 </head>
-
 <body>
 
+    <h1>NEON RACER</h1>
+    <canvas id="gameCanvas" width="400" height="500"></canvas>
+    
+    <div class="ui">
+        <div class="score">Pontos: <span id="scoreVal">0</span></div>
+        <p>Use as setas ← → para mover | Espaço para reiniciar</p>
+    </div>
 
+    <div class="footer">Desenvolvido por <b>Luis Gustavo</b></div>
 
-    <h1>NEON RACER</h1>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("scoreVal");
 
-    <canvas id="gameCanvas" width="400" height="500"></canvas>
+        // Configurações do Jogador
+        const carWidth = 40;
+        const carHeight = 70;
+        let carX = canvas.width / 2 - carWidth / 2;
+        let carY = canvas.height - 100;
+        let carSpeed = 7;
 
-    
+        // Obstáculos
+        let obstacles = [];
+        let obstacleSpeed = 4;
+        let frameCount = 0;
+        let score = 0;
+        let gameOver = false;
 
-    <div class="ui">
+        // Controles
+        let rightPressed = false;
+        let leftPressed = false;
 
-        <div class="score">Pontos: <span id="scoreVal">0</span></div>
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowRight") rightPressed = true;
+            if (e.key === "ArrowLeft") leftPressed = true;
+            if (e.key === " " && gameOver) resetGame();
+        });
 
-        <p>Use as setas ← → para mover</p>
+        document.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowRight") rightPressed = false;
+            if (e.key === "ArrowLeft") leftPressed = false;
+        });
 
-    </div>
+        function resetGame() {
+            carX = canvas.width / 2 - carWidth / 2;
+            obstacles = [];
+            score = 0;
+            obstacleSpeed = 4;
+            frameCount = 0;
+            gameOver = false;
+            scoreElement.innerText = "0";
+            update();
+        }
 
+        function drawPlayer() {
+            ctx.fillStyle = "#0fa";
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#0fa";
+            // Desenha o corpo do carro
+            ctx.fillRect(carX, carY, carWidth, carHeight);
+            // Detalhe do para-brisa
+            ctx.fillStyle = "#111";
+            ctx.fillRect(carX + 5, carY + 10, carWidth - 10, 20);
+            ctx.shadowBlur = 0;
+        }
 
+        function drawObstacles() {
+            ctx.fillStyle = "#f0a"; // Cor neon rosa para obstáculos
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#f0a";
+            obstacles.forEach(obs => {
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            });
+            ctx.shadowBlur = 0;
+        }
 
-    <div class="footer">Desenvolvido por <b>Luis Gustavo</b></div>
+        function update() {
+            if (gameOver) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#fff";
+                ctx.font = "30px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("FIM DE JOGO!", canvas.width / 2, canvas.height / 2);
+                ctx.font = "18px Arial";
+                ctx.fillText("Pressione ESPAÇO para jogar", canvas.width / 2, canvas.height / 2 + 40);
+                return;
+            }
 
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Movimentação
+            if (rightPressed && carX < canvas.width - carWidth) carX += carSpeed;
+            if (leftPressed && carX > 0) carX -= carSpeed;
 
-    <script>
+            // Criar obstáculos periodicamente
+            frameCount++;
+            if (frameCount % 80 === 0) {
+                let xPos = Math.random() * (canvas.width - carWidth);
+                obstacles.push({ x: xPos, y: -carHeight, width: carWidth, height: carHeight });
+            }
 
-        const canvas = document.getElementById("gameCanvas");
+            // Mover e limpar obstáculos
+            for (let i = 0; i < obstacles.length; i++) {
+                obstacles[i].y += obstacleSpeed;
 
-        const ctx = canvas.getContext("2d");
+                // Colisão simples AABB
+                if (carX < obstacles[i].x + obstacles[i].width &&
+                    carX + carWidth > obstacles[i].x &&
+                    carY < obstacles[i].y + obstacles[i].height &&
+                    carY + carHeight > obstacles[i].y) {
+                    gameOver = true;
+                }
 
-        const scoreElement = document.getElementById("scoreVal");
+                // Pontuação e remoção
+                if (obstacles[i].y > canvas.height) {
+                    obstacles.splice(i, 1);
+                    i--;
+                    score++;
+                    scoreElement.innerText = score;
+                    // Aumenta a velocidade gradualmente
+                    if (score % 5 === 0) obstacleSpeed += 0.2;
+                }
+            }
 
+            drawPlayer();
+            drawObstacles();
 
+            requestAnimationFrame(update);
+        }
 
-        // Configurações do Jogador
-
-        const carWidth = 40;
-
-        const carHeight = 60;
-
-        let carX = canvas.width / 2 - carWidth / 2;
-
-        let carY = canvas.height - 80;
-
-        let carSpeed = 7;
-
-
-
-        // Obstáculos
-
-        let obstacles = [];
-
-        let obstacleSpeed = 3;
-
-        let frameCount = 0;
-
-        let score = 0;
-
-        let gameOver = false;
-
-
-
-        // Controles
-
-        let rightPressed = false;
-
-        let leftPressed = false;
-
-
-
-        document.addEventListener("keydown", (e) => {
-
-            if (e.key === "ArrowRight") rightPressed = true;
-
-            if (e.key === "ArrowLeft") leftPressed = true;
-
-            if (e.key === " " && gameOver) resetGame();
-
-        });
-
-
-
-        document.addEventListener("keyup", (e) => {
-
-            if (e.key === "ArrowRight") rightPressed = false;
-
-            if (e.key === "
-
-
-              
-adicione alguns carros nesse codigo
+        update();
+    </script>
+</body>
+</html>
