@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FPS Realista - NPC Humanoide</title>
+    <title>FPS Realista - Sobrevivência</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         #crosshair {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 8px;
-            height: 8px;
+            top: 50%; left: 50%;
+            width: 10px; height: 10px;
             background: rgba(255, 0, 0, 0.8);
             border-radius: 50%;
             transform: translate(-50%, -50%);
@@ -20,29 +18,29 @@
         }
         #instructions {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            color: white;
-            background: rgba(0,0,0,0.8);
-            padding: 30px;
-            text-align: center;
-            border-radius: 10px;
-            cursor: pointer;
-            border: 2px solid #555;
+            color: white; background: rgba(0,0,0,0.9);
+            padding: 30px; text-align: center; border-radius: 10px;
+            cursor: pointer; border: 2px solid #555; z-index: 10;
+        }
+        #damage-flash {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: red; opacity: 0; pointer-events: none;
+            transition: opacity 0.1s;
         }
     </style>
 </head>
 <body>
 
+    <div id="damage-flash"></div>
     <div id="crosshair"></div>
     <div id="instructions">
-        <h1>FPS REALISTA</h1>
-        <p><strong>W, A, S, D</strong> para caminhar</p>
-        <p><strong>MOUSE</strong> para olhar e mirar</p>
-        <p><strong>CLIQUE</strong> para atirar nos NPCs</p>
-        <br>
-        <button style="padding: 10px 20px; cursor:pointer">CLIQUE PARA INICIAR</button>
+        <h1>INVASÃO NPC</h1>
+        <p>Eles estão vindo atrás de você!</p>
+        <p><strong>W, A, S, D</strong> para fugir | <strong>CLIQUE</strong> para eliminar</p>
+        <button style="padding: 10px 20px; cursor:pointer; margin-top:10px">JOGAR</button>
     </div>
 
     <script type="importmap">
@@ -58,170 +56,163 @@
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        // --- Configuração da Cena ---
+        // --- Cena e Renderização ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x222222); // Noite urbana
-        scene.fog = new THREE.Fog(0x222222, 10, 60);
+        scene.background = new THREE.Color(0x050505);
+        scene.fog = new THREE.Fog(0x050505, 5, 40);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.y = 1.7; // Altura dos olhos
-
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // --- Iluminação (Mais dramática/realista) ---
-        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-        sun.position.set(5, 15, 5);
-        sun.castShadow = true;
-        scene.add(sun);
-
-        const ambient = new THREE.AmbientLight(0x404040, 0.5);
-        scene.add(ambient);
+        // --- Iluminação ---
+        const light = new THREE.PointLight(0xffffff, 50, 100);
+        camera.add(light); // Luz acoplada à câmera (lanterna)
+        scene.add(camera);
+        scene.add(new THREE.AmbientLight(0x111111));
 
         // --- Chão ---
         const floorGeo = new THREE.PlaneGeometry(200, 200);
-        const floorMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // --- NPCs em forma de pessoa ---
-        const npcs = [];
+        // --- Arma do Jogador (Visual) ---
+        const gunGroup = new THREE.Group();
+        const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.5), new THREE.MeshStandardMaterial({color: 0x111111}));
+        gunBody.position.set(0.3, -0.2, -0.4);
+        gunGroup.add(gunBody);
+        camera.add(gunGroup);
+
+        // --- Gerenciamento de NPCs ---
+        const npcList = [];
         const npcHitboxes = [];
 
-        function createNPC(x, z) {
+        function createEnemy(x, z) {
             const group = new THREE.Group();
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xddaa88 });
+            const clothesMat = new THREE.MeshStandardMaterial({ color: 0x222244 });
 
-            // Materiais
-            const clothesMat = new THREE.MeshPhongMaterial({ color: new THREE.Color(`hsl(${Math.random() * 360}, 30%, 30%)`) });
-            const skinMat = new THREE.MeshPhongMaterial({ color: 0xd2b48c });
-
-            // Cabeça
+            // Corpo
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), skinMat);
-            head.position.y = 1.65;
-            group.add(head);
-
-            // Tronco
-            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), clothesMat);
-            torso.position.y = 1.15;
-            group.add(torso);
-
-            // Braços
-            const armGeo = new THREE.BoxGeometry(0.2, 0.6, 0.2);
-            const leftArm = new THREE.Mesh(armGeo, skinMat);
-            leftArm.position.set(-0.4, 1.15, 0);
-            group.add(leftArm);
-
-            const rightArm = new THREE.Mesh(armGeo, skinMat);
-            rightArm.position.set(0.4, 1.15, 0);
-            group.add(rightArm);
-
+            head.position.y = 1.6;
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), clothesMat);
+            torso.position.y = 1.1;
+            
             // Pernas
-            const legGeo = new THREE.BoxGeometry(0.22, 0.8, 0.22);
-            const leftLeg = new THREE.Mesh(legGeo, clothesMat);
-            leftLeg.position.set(-0.15, 0.4, 0);
-            group.add(leftLeg);
+            const legGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
+            const lLeg = new THREE.Mesh(legGeo, clothesMat); lLeg.position.set(-0.15, 0.35, 0);
+            const rLeg = new THREE.Mesh(legGeo, clothesMat); rLeg.position.set(0.15, 0.35, 0);
 
-            const rightLeg = new THREE.Mesh(legGeo, clothesMat);
-            rightLeg.position.set(0.15, 0.4, 0);
-            group.add(rightLeg);
+            group.add(head, torso, lLeg, rLeg);
 
-            // Adicionar sombras a todas as partes
-            group.traverse(child => { if(child.isMesh) child.castShadow = true; });
+            // Braços em posição de ataque
+            const armGeo = new THREE.BoxGeometry(0.15, 0.5, 0.15);
+            const lArm = new THREE.Mesh(armGeo, skinMat); 
+            lArm.position.set(-0.35, 1.2, -0.2); 
+            lArm.rotation.x = -Math.PI/3; // Braço para frente
+            group.add(lArm);
 
             group.position.set(x, 0, z);
             scene.add(group);
 
-            // Hitbox invisível (para detectar o tiro com facilidade)
-            const hitboxGeo = new THREE.BoxGeometry(1, 1.8, 0.5);
-            const hitboxMat = new THREE.MeshBasicMaterial({ visible: false });
-            const hitbox = new THREE.Mesh(hitboxGeo, hitboxMat);
-            hitbox.position.set(x, 0.9, z);
-            hitbox.userData.npcGroup = group; // Referência para remover o boneco visual
-            
+            // Hitbox para tiro
+            const hitbox = new THREE.Mesh(
+                new THREE.BoxGeometry(0.8, 1.8, 0.8), 
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            hitbox.position.copy(group.position);
+            hitbox.position.y = 0.9;
+            hitbox.userData.visual = group;
             scene.add(hitbox);
+
+            npcList.push({ visual: group, hitbox: hitbox, speed: 0.03 + Math.random() * 0.04 });
             npcHitboxes.push(hitbox);
         }
 
-        // Espalhar 15 NPCs pelo mapa
-        for(let i = 0; i < 15; i++) {
-            createNPC(Math.random() * 40 - 20, Math.random() * -40 - 5);
-        }
+        for(let i=0; i<12; i++) createEnemy(Math.random()*60-30, Math.random()*-60-10);
 
-        // --- Controles e Movimento ---
+        // --- Controles ---
         const controls = new PointerLockControls(camera, document.body);
         const instructions = document.getElementById('instructions');
-
         instructions.addEventListener('click', () => controls.lock());
         controls.addEventListener('lock', () => instructions.style.display = 'none');
         controls.addEventListener('unlock', () => instructions.style.display = 'block');
 
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        const velocity = new THREE.Vector3();
-
+        let moveF = false, moveB = false, moveL = false, moveR = false;
         document.addEventListener('keydown', (e) => {
-            if(e.code === 'KeyW') moveForward = true;
-            if(e.code === 'KeyS') moveBackward = true;
-            if(e.code === 'KeyA') moveLeft = true;
-            if(e.code === 'KeyD') moveRight = true;
+            if(e.code==='KeyW') moveF=true; if(e.code==='KeyS') moveB=true;
+            if(e.code==='KeyA') moveL=true; if(e.code==='KeyD') moveR=true;
         });
         document.addEventListener('keyup', (e) => {
-            if(e.code === 'KeyW') moveForward = false;
-            if(e.code === 'KeyS') moveBackward = false;
-            if(e.code === 'KeyA') moveLeft = false;
-            if(e.code === 'KeyD') moveRight = false;
+            if(e.code==='KeyW') moveF=false; if(e.code==='KeyS') moveB=false;
+            if(e.code==='KeyA') moveL=false; if(e.code==='KeyD') moveR=false;
         });
 
-        // --- Sistema de Combate ---
+        // --- Atirar ---
         const raycaster = new THREE.Raycaster();
         document.addEventListener('mousedown', () => {
-            if (!controls.isLocked) return;
+            if(!controls.isLocked) return;
 
-            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const intersects = raycaster.intersectObjects(npcHitboxes);
+            // Animação de coice da arma
+            gunGroup.position.z = 0.1;
+            setTimeout(() => gunGroup.position.z = 0, 50);
 
-            if (intersects.length > 0) {
-                const target = intersects[0].object;
-                const visualModel = target.userData.npcGroup;
-
-                // Efeito de acerto (Fica vermelho rápido e some)
-                visualModel.traverse(c => { if(c.isMesh) c.material.color.set(0xff0000); });
-
-                setTimeout(() => {
-                    scene.remove(visualModel);
-                    scene.remove(target);
-                    npcHitboxes.splice(npcHitboxes.indexOf(target), 1);
-                }, 100);
+            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+            const hits = raycaster.intersectObjects(npcHitboxes);
+            
+            if(hits.length > 0) {
+                const hit = hits[0].object;
+                scene.remove(hit.userData.visual);
+                scene.remove(hit);
+                const index = npcList.findIndex(n => n.hitbox === hit);
+                if(index > -1) npcList.splice(index, 1);
+                npcHitboxes.splice(npcHitboxes.indexOf(hit), 1);
             }
         });
 
-        // --- Loop Principal ---
-        let lastTime = performance.now();
+        // --- Loop de IA e Animação ---
+        const flash = document.getElementById('damage-flash');
+        
         function animate() {
             requestAnimationFrame(animate);
-            const time = performance.now();
-            const delta = (time - lastTime) / 1000;
+            
+            if(controls.isLocked) {
+                // Movimento Jogador
+                if(moveF) controls.moveForward(0.15);
+                if(moveB) controls.moveForward(-0.1);
+                if(moveL) controls.moveRight(-0.1);
+                if(moveR) controls.moveRight(0.1);
 
-            if (controls.isLocked) {
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
+                // IA dos NPCs
+                npcList.forEach(npc => {
+                    // Olhar para o jogador (apenas no eixo Y)
+                    npc.visual.lookAt(camera.position.x, 0, camera.position.z);
+                    
+                    // Mover em direção ao jogador
+                    const dir = new THREE.Vector3();
+                    dir.subVectors(camera.position, npc.visual.position).normalize();
+                    
+                    npc.visual.position.x += dir.x * npc.speed;
+                    npc.visual.position.z += dir.z * npc.speed;
+                    
+                    // Atualizar hitbox
+                    npc.hitbox.position.x = npc.visual.position.x;
+                    npc.hitbox.position.z = npc.visual.position.z;
 
-                const dir = new THREE.Vector3();
-                dir.z = Number(moveForward) - Number(moveBackward);
-                dir.x = Number(moveRight) - Number(moveLeft);
-                dir.normalize();
-
-                if (moveForward || moveBackward) velocity.z -= dir.z * 100.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= dir.x * 100.0 * delta;
-
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
+                    // Detectar Dano (proximidade)
+                    const dist = npc.visual.position.distanceTo(camera.position);
+                    if(dist < 1.5) {
+                        flash.style.opacity = "0.5";
+                        setTimeout(() => flash.style.opacity = "0", 50);
+                    }
+                });
             }
 
-            lastTime = time;
             renderer.render(scene, camera);
         }
 
