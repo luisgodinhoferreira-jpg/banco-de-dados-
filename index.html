@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FPS Realista Base</title>
+    <title>FPS Realista - NPC Humanoide</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #crosshair {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 10px;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.8);
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 0, 0, 0.8);
             border-radius: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
-            border: 1px solid black;
+            border: 1px solid white;
         }
         #instructions {
             position: absolute;
@@ -24,10 +24,12 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: white;
-            background: rgba(0,0,0,0.7);
-            padding: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
             text-align: center;
+            border-radius: 10px;
             cursor: pointer;
+            border: 2px solid #555;
         }
     </style>
 </head>
@@ -35,8 +37,12 @@
 
     <div id="crosshair"></div>
     <div id="instructions">
-        <h1>Clique para Jogar</h1>
-        <p>(W,A,S,D) Mover | (Mouse) Olhar | (Clique) Atirar</p>
+        <h1>FPS REALISTA</h1>
+        <p><strong>W, A, S, D</strong> para caminhar</p>
+        <p><strong>MOUSE</strong> para olhar e mirar</p>
+        <p><strong>CLIQUE</strong> para atirar nos NPCs</p>
+        <br>
+        <button style="padding: 10px 20px; cursor:pointer">CLIQUE PARA INICIAR</button>
     </div>
 
     <script type="importmap">
@@ -54,44 +60,98 @@
 
         // --- Configuração da Cena ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb); // Céu azul
-        scene.fog = new THREE.Fog(0x87ceeb, 0, 50);
+        scene.background = new THREE.Color(0x222222); // Noite urbana
+        scene.fog = new THREE.Fog(0x222222, 10, 60);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.y = 1.7; // Altura dos olhos
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // --- Iluminação ---
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(10, 20, 10);
-        light.castShadow = true;
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040));
+        // --- Iluminação (Mais dramática/realista) ---
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+        sun.position.set(5, 15, 5);
+        sun.castShadow = true;
+        scene.add(sun);
 
-        // --- Chão (Grid) ---
-        const floorGeometry = new THREE.PlaneGeometry(100, 100);
-        const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 });
-        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        const ambient = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambient);
+
+        // --- Chão ---
+        const floorGeo = new THREE.PlaneGeometry(200, 200);
+        const floorMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // --- Alvos ---
-        const targets = [];
-        function createTarget(x, z) {
-            const geometry = new THREE.BoxGeometry(1, 2, 1);
-            const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-            const target = new THREE.Mesh(geometry, material);
-            target.position.set(x, 1, z);
-            target.castShadow = true;
-            scene.add(target);
-            targets.push(target);
-        }
-        for(let i=0; i<10; i++) createTarget(Math.random()*40-20, Math.random()*-40);
+        // --- NPCs em forma de pessoa ---
+        const npcs = [];
+        const npcHitboxes = [];
 
-        // --- Controles ---
+        function createNPC(x, z) {
+            const group = new THREE.Group();
+
+            // Materiais
+            const clothesMat = new THREE.MeshPhongMaterial({ color: new THREE.Color(`hsl(${Math.random() * 360}, 30%, 30%)`) });
+            const skinMat = new THREE.MeshPhongMaterial({ color: 0xd2b48c });
+
+            // Cabeça
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), skinMat);
+            head.position.y = 1.65;
+            group.add(head);
+
+            // Tronco
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), clothesMat);
+            torso.position.y = 1.15;
+            group.add(torso);
+
+            // Braços
+            const armGeo = new THREE.BoxGeometry(0.2, 0.6, 0.2);
+            const leftArm = new THREE.Mesh(armGeo, skinMat);
+            leftArm.position.set(-0.4, 1.15, 0);
+            group.add(leftArm);
+
+            const rightArm = new THREE.Mesh(armGeo, skinMat);
+            rightArm.position.set(0.4, 1.15, 0);
+            group.add(rightArm);
+
+            // Pernas
+            const legGeo = new THREE.BoxGeometry(0.22, 0.8, 0.22);
+            const leftLeg = new THREE.Mesh(legGeo, clothesMat);
+            leftLeg.position.set(-0.15, 0.4, 0);
+            group.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(legGeo, clothesMat);
+            rightLeg.position.set(0.15, 0.4, 0);
+            group.add(rightLeg);
+
+            // Adicionar sombras a todas as partes
+            group.traverse(child => { if(child.isMesh) child.castShadow = true; });
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+
+            // Hitbox invisível (para detectar o tiro com facilidade)
+            const hitboxGeo = new THREE.BoxGeometry(1, 1.8, 0.5);
+            const hitboxMat = new THREE.MeshBasicMaterial({ visible: false });
+            const hitbox = new THREE.Mesh(hitboxGeo, hitboxMat);
+            hitbox.position.set(x, 0.9, z);
+            hitbox.userData.npcGroup = group; // Referência para remover o boneco visual
+            
+            scene.add(hitbox);
+            npcHitboxes.push(hitbox);
+        }
+
+        // Espalhar 15 NPCs pelo mapa
+        for(let i = 0; i < 15; i++) {
+            createNPC(Math.random() * 40 - 20, Math.random() * -40 - 5);
+        }
+
+        // --- Controles e Movimento ---
         const controls = new PointerLockControls(camera, document.body);
         const instructions = document.getElementById('instructions');
 
@@ -99,78 +159,74 @@
         controls.addEventListener('lock', () => instructions.style.display = 'none');
         controls.addEventListener('unlock', () => instructions.style.display = 'block');
 
-        // Movimentação
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
 
-        const onKeyDown = (event) => {
-            switch (event.code) {
-                case 'KeyW': moveForward = true; break;
-                case 'KeyA': moveLeft = true; break;
-                case 'KeyS': moveBackward = true; break;
-                case 'KeyD': moveRight = true; break;
-            }
-        };
-        const onKeyUp = (event) => {
-            switch (event.code) {
-                case 'KeyW': moveForward = false; break;
-                case 'KeyA': moveLeft = false; break;
-                case 'KeyS': moveBackward = false; break;
-                case 'KeyD': moveRight = false; break;
-            }
-        };
-        document.addEventListener('keydown', onKeyDown);
-        document.addEventListener('keyup', onKeyUp);
+        document.addEventListener('keydown', (e) => {
+            if(e.code === 'KeyW') moveForward = true;
+            if(e.code === 'KeyS') moveBackward = true;
+            if(e.code === 'KeyA') moveLeft = true;
+            if(e.code === 'KeyD') moveRight = true;
+        });
+        document.addEventListener('keyup', (e) => {
+            if(e.code === 'KeyW') moveForward = false;
+            if(e.code === 'KeyS') moveBackward = false;
+            if(e.code === 'KeyA') moveLeft = false;
+            if(e.code === 'KeyD') moveRight = false;
+        });
 
-        // --- Sistema de Tiro (Raycaster) ---
+        // --- Sistema de Combate ---
         const raycaster = new THREE.Raycaster();
         document.addEventListener('mousedown', () => {
             if (!controls.isLocked) return;
 
-            // Define o raio a partir do centro da câmera
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const intersects = raycaster.intersectObjects(targets);
+            const intersects = raycaster.intersectObjects(npcHitboxes);
 
             if (intersects.length > 0) {
-                const hit = intersects[0].object;
-                hit.material.color.set(0xffff00); // Muda cor ao atingir
+                const target = intersects[0].object;
+                const visualModel = target.userData.npcGroup;
+
+                // Efeito de acerto (Fica vermelho rápido e some)
+                visualModel.traverse(c => { if(c.isMesh) c.material.color.set(0xff0000); });
+
                 setTimeout(() => {
-                    scene.remove(hit);
-                    targets.splice(targets.indexOf(hit), 1);
+                    scene.remove(visualModel);
+                    scene.remove(target);
+                    npcHitboxes.splice(npcHitboxes.indexOf(target), 1);
                 }, 100);
             }
         });
 
-        // --- Loop de Animação ---
-        let prevTime = performance.now();
+        // --- Loop Principal ---
+        let lastTime = performance.now();
         function animate() {
             requestAnimationFrame(animate);
-
             const time = performance.now();
-            if (controls.isLocked) {
-                const delta = (time - prevTime) / 1000;
+            const delta = (time - lastTime) / 1000;
 
+            if (controls.isLocked) {
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
 
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
+                const dir = new THREE.Vector3();
+                dir.z = Number(moveForward) - Number(moveBackward);
+                dir.x = Number(moveRight) - Number(moveLeft);
+                dir.normalize();
 
-                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
+                if (moveForward || moveBackward) velocity.z -= dir.z * 100.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= dir.x * 100.0 * delta;
 
                 controls.moveRight(-velocity.x * delta);
                 controls.moveForward(-velocity.z * delta);
             }
-            prevTime = time;
+
+            lastTime = time;
             renderer.render(scene, camera);
         }
 
         animate();
 
-        // Ajuste de janela
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
