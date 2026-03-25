@@ -25,6 +25,13 @@
             letter-spacing: 5px;
         }
 
+        /* Layout em linha para o jogo e ranking */
+        #mainLayout {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
         #gameContainer {
             position: relative;
             box-shadow: 0 0 50px rgba(0, 255, 170, 0.1);
@@ -36,6 +43,43 @@
             border-radius: 8px;
             display: block;
         }
+
+        /* Estilo do Ranking */
+        #rankingContainer {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #0fa;
+            border-radius: 8px;
+            padding: 15px;
+            width: 180px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 20px rgba(0, 255, 170, 0.1);
+        }
+
+        #rankingContainer h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: #0fa;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 255, 170, 0.3);
+            padding-bottom: 5px;
+        }
+
+        #leaderboard {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        #leaderboard li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        #leaderboard li:last-child { border: none; }
+        .rank-pos { color: #0fa; font-weight: bold; margin-right: 5px; }
 
         .ui {
             margin-top: 15px;
@@ -64,8 +108,16 @@
 
     <h1>NEON RACER</h1>
     
-    <div id="gameContainer">
-        <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="mainLayout">
+        <div id="gameContainer">
+            <canvas id="gameCanvas" width="400" height="600"></canvas>
+        </div>
+
+        <div id="rankingContainer">
+            <h2>🏆 TOP 5</h2>
+            <ul id="leaderboard">
+                </ul>
+        </div>
     </div>
     
     <div class="ui">
@@ -79,38 +131,46 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("scoreVal");
+        const leaderboardElement = document.getElementById("leaderboard");
 
-        // Estado do Jogo
         let score = 0;
         let gameOver = false;
         let frameCount = 0;
+        let highScores = JSON.parse(localStorage.getItem("neonRacerScores")) || [];
 
-        // Estrada (Linhas de movimento)
-        let roadLines = [];
-        for(let i = 0; i < 5; i++) {
-            roadLines.push({ y: i * 150 });
-        }
-
-        // Jogador
         const carWidth = 45;
         const carHeight = 80;
         let carX = canvas.width / 2 - carWidth / 2;
         let carY = canvas.height - 120;
         let carSpeed = 8;
-        let carTilt = 0; // Inclinação para realismo nas curvas
+        let carTilt = 0;
 
-        // Obstáculos e Partículas
         let obstacles = [];
         let particles = [];
         let obstacleSpeed = 5;
-
-        // Controles
         let keys = {};
+
         document.addEventListener("keydown", (e) => {
             keys[e.key] = true;
             if (e.key === " " && gameOver) resetGame();
         });
         document.addEventListener("keyup", (e) => keys[e.key] = false);
+
+        function updateRankingDisplay() {
+            leaderboardElement.innerHTML = highScores
+                .map((s, i) => `<li><span><span class="rank-pos">${i+1}º</span> ${s.date}</span> <b>${s.pts}</b></li>`)
+                .join("");
+        }
+
+        function saveScore(finalScore) {
+            if (finalScore <= 0) return;
+            const date = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+            highScores.push({ pts: finalScore, date: date });
+            highScores.sort((a, b) => b.pts - a.pts);
+            highScores = highScores.slice(0, 5); // Mantém apenas os 5 melhores
+            localStorage.setItem("neonRacerScores", JSON.stringify(highScores));
+            updateRankingDisplay();
+        }
 
         function resetGame() {
             carX = canvas.width / 2 - carWidth / 2;
@@ -126,12 +186,10 @@
         function createExplosion(x, y, color) {
             for(let i = 0; i < 20; i++) {
                 particles.push({
-                    x: x,
-                    y: y,
+                    x: x, y: y,
                     vx: (Math.random() - 0.5) * 10,
                     vy: (Math.random() - 0.5) * 10,
-                    life: 1,
-                    color: color
+                    life: 1, color: color
                 });
             }
         }
@@ -139,14 +197,11 @@
         function drawRoad() {
             ctx.strokeStyle = "rgba(0, 255, 170, 0.2)";
             ctx.lineWidth = 2;
-            
-            // Linhas laterais
             ctx.beginPath();
             ctx.moveTo(20, 0); ctx.lineTo(20, canvas.height);
             ctx.moveTo(canvas.width - 20, 0); ctx.lineTo(canvas.width - 20, canvas.height);
             ctx.stroke();
 
-            // Linhas centrais em movimento
             ctx.setLineDash([40, 40]);
             ctx.lineDashOffset = -frameCount * obstacleSpeed;
             ctx.beginPath();
@@ -160,30 +215,17 @@
             ctx.save();
             ctx.translate(carX + carWidth/2, carY + carHeight/2);
             ctx.rotate(carTilt);
-
-            // Brilho do carro
             ctx.shadowBlur = 20;
             ctx.shadowColor = "#0fa";
-            
-            // Corpo principal (Gradiente para profundidade)
             let grd = ctx.createLinearGradient(-carWidth/2, 0, carWidth/2, 0);
-            grd.addColorStop(0, "#0fa");
-            grd.addColorStop(0.5, "#068");
-            grd.addColorStop(1, "#0fa");
-            
+            grd.addColorStop(0, "#0fa"); grd.addColorStop(0.5, "#068"); grd.addColorStop(1, "#0fa");
             ctx.fillStyle = grd;
             ctx.fillRect(-carWidth/2, -carHeight/2, carWidth, carHeight);
-
-            // Faróis (Luzes frontais)
             ctx.fillStyle = "#fff";
-            ctx.shadowBlur = 10;
             ctx.fillRect(-carWidth/2 + 5, -carHeight/2, 10, 5);
             ctx.fillRect(carWidth/2 - 15, -carHeight/2, 10, 5);
-
-            // Para-brisa
             ctx.fillStyle = "rgba(0,0,0,0.6)";
             ctx.fillRect(-carWidth/2 + 5, -carHeight/2 + 15, carWidth - 10, 25);
-
             ctx.restore();
         }
 
@@ -196,14 +238,13 @@
                 ctx.textAlign = "center";
                 ctx.fillText("CRASH!", canvas.width / 2, canvas.height / 2);
                 ctx.font = "20px Arial";
-                ctx.fillText("Espaço para Tentar Novamente", canvas.width / 2, canvas.height / 2 + 50);
+                ctx.fillText("Espaço para Reiniciar", canvas.width / 2, canvas.height / 2 + 50);
                 return;
             }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             frameCount++;
 
-            // Movimentação com inclinação suave
             if (keys["ArrowRight"] && carX < canvas.width - carWidth - 20) {
                 carX += carSpeed;
                 carTilt = Math.min(carTilt + 0.02, 0.1);
@@ -211,52 +252,43 @@
                 carX -= carSpeed;
                 carTilt = Math.max(carTilt - 0.02, -0.1);
             } else {
-                carTilt *= 0.9; // Volta ao centro
+                carTilt *= 0.9;
             }
 
             drawRoad();
 
-            // Criar obstáculos
             if (frameCount % Math.max(20, 70 - Math.floor(score/2)) === 0) {
                 let xPos = 30 + Math.random() * (canvas.width - carWidth - 60);
                 obstacles.push({ x: xPos, y: -carHeight, w: carWidth, h: carHeight, color: "#f0a" });
             }
 
-            // Loop de obstáculos
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 let o = obstacles[i];
                 o.y += obstacleSpeed;
-
-                // Desenho do obstáculo neon
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = o.color;
                 ctx.fillStyle = o.color;
                 ctx.fillRect(o.x, o.y, o.w, o.h);
                 
-                // Colisão (AABB com margem de segurança)
                 if (carX < o.x + o.w - 5 && carX + carWidth > o.x + 5 &&
                     carY < o.y + o.h - 5 && carY + carHeight > o.y + 5) {
                     createExplosion(carX + carWidth/2, carY + 20, "#0fa");
-                    createExplosion(o.x + o.w/2, o.y + o.h/2, "#f0a");
                     gameOver = true;
+                    saveScore(score); // SALVA A PONTUAÇÃO AO MORRER
                 }
 
-                // Pontuação e aumento de velocidade POR PONTO
                 if (o.y > canvas.height) {
                     obstacles.splice(i, 1);
                     score++;
                     scoreElement.innerText = score;
-                    obstacleSpeed += 0.15; // Aceleração constante
+                    obstacleSpeed += 0.15;
                 }
             }
 
-            // Partículas de explosão
             particles.forEach((p, index) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.02;
+                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
                 ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.life;
+                ctx.globalAlpha = Math.max(0, p.life);
                 ctx.fillRect(p.x, p.y, 4, 4);
                 if(p.life <= 0) particles.splice(index, 1);
             });
@@ -266,6 +298,8 @@
             requestAnimationFrame(update);
         }
 
+        // Inicializa o ranking ao carregar a página
+        updateRankingDisplay();
         update();
     </script>
 </body>
