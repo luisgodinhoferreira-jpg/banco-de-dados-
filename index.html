@@ -3,304 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Racer Pro | Luis Gustavo</title>
+    <title>FPS Realista Base</title>
     <style>
-        body {
-            margin: 0;
-            background-color: #05080f;
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            border: 1px solid black;
+        }
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        h1 {
-            text-shadow: 0 0 15px #0fa, 0 0 30px #0fa;
-            color: #0fa;
-            margin: 5px 0;
-            letter-spacing: 5px;
-        }
-
-        /* Layout em linha para o jogo e ranking */
-        #mainLayout {
-            display: flex;
-            align-items: flex-start;
-            gap: 20px;
-        }
-
-        #gameContainer {
-            position: relative;
-            box-shadow: 0 0 50px rgba(0, 255, 170, 0.1);
-        }
-
-        #gameCanvas {
-            border: 3px solid #0fa;
-            background: linear-gradient(to bottom, #111 0%, #05080f 100%);
-            border-radius: 8px;
-            display: block;
-        }
-
-        /* Estilo do Ranking */
-        #rankingContainer {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid #0fa;
-            border-radius: 8px;
-            padding: 15px;
-            width: 180px;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 0 20px rgba(0, 255, 170, 0.1);
-        }
-
-        #rankingContainer h2 {
-            margin-top: 0;
-            font-size: 1.2rem;
-            color: #0fa;
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
             text-align: center;
-            border-bottom: 1px solid rgba(0, 255, 170, 0.3);
-            padding-bottom: 5px;
-        }
-
-        #leaderboard {
-            list-style: none;
-            padding: 0;
-            margin: 10px 0;
-        }
-
-        #leaderboard li {
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-        }
-
-        #leaderboard li:last-child { border: none; }
-        .rank-pos { color: #0fa; font-weight: bold; margin-right: 5px; }
-
-        .ui {
-            margin-top: 15px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 10px 20px;
-            border-radius: 20px;
-            backdrop-filter: blur(5px);
-        }
-
-        .score {
-            font-size: 28px;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
-        }
-
-        .footer {
-            margin-top: 15px;
-            font-size: 0.8rem;
-            opacity: 0.5;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <h1>NEON RACER</h1>
-    
-    <div id="mainLayout">
-        <div id="gameContainer">
-            <canvas id="gameCanvas" width="400" height="600"></canvas>
-        </div>
-
-        <div id="rankingContainer">
-            <h2>🏆 TOP 5</h2>
-            <ul id="leaderboard">
-                </ul>
-        </div>
-    </div>
-    
-    <div class="ui">
-        <div class="score">Score: <span id="scoreVal">0</span></div>
-        <p style="margin: 5px 0; font-size: 0.9rem; opacity: 0.8;">Setas ← → para pilotar | Espaço para reiniciar</p>
+    <div id="crosshair"></div>
+    <div id="instructions">
+        <h1>Clique para Jogar</h1>
+        <p>(W,A,S,D) Mover | (Mouse) Olhar | (Clique) Atirar</p>
     </div>
 
-    <div class="footer">Engine Visual por <b>Luis Gustavo</b></div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const scoreElement = document.getElementById("scoreVal");
-        const leaderboardElement = document.getElementById("leaderboard");
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        let score = 0;
-        let gameOver = false;
-        let frameCount = 0;
-        let highScores = JSON.parse(localStorage.getItem("neonRacerScores")) || [];
+        // --- Configuração da Cena ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Céu azul
+        scene.fog = new THREE.Fog(0x87ceeb, 0, 50);
 
-        const carWidth = 45;
-        const carHeight = 80;
-        let carX = canvas.width / 2 - carWidth / 2;
-        let carY = canvas.height - 120;
-        let carSpeed = 8;
-        let carTilt = 0;
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
 
-        let obstacles = [];
-        let particles = [];
-        let obstacleSpeed = 5;
-        let keys = {};
+        // --- Iluminação ---
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(10, 20, 10);
+        light.castShadow = true;
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
 
-        document.addEventListener("keydown", (e) => {
-            keys[e.key] = true;
-            if (e.key === " " && gameOver) resetGame();
+        // --- Chão (Grid) ---
+        const floorGeometry = new THREE.PlaneGeometry(100, 100);
+        const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- Alvos ---
+        const targets = [];
+        function createTarget(x, z) {
+            const geometry = new THREE.BoxGeometry(1, 2, 1);
+            const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+            const target = new THREE.Mesh(geometry, material);
+            target.position.set(x, 1, z);
+            target.castShadow = true;
+            scene.add(target);
+            targets.push(target);
+        }
+        for(let i=0; i<10; i++) createTarget(Math.random()*40-20, Math.random()*-40);
+
+        // --- Controles ---
+        const controls = new PointerLockControls(camera, document.body);
+        const instructions = document.getElementById('instructions');
+
+        instructions.addEventListener('click', () => controls.lock());
+        controls.addEventListener('lock', () => instructions.style.display = 'none');
+        controls.addEventListener('unlock', () => instructions.style.display = 'block');
+
+        // Movimentação
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        const onKeyDown = (event) => {
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyD': moveRight = true; break;
+            }
+        };
+        const onKeyUp = (event) => {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        };
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        // --- Sistema de Tiro (Raycaster) ---
+        const raycaster = new THREE.Raycaster();
+        document.addEventListener('mousedown', () => {
+            if (!controls.isLocked) return;
+
+            // Define o raio a partir do centro da câmera
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(targets);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                hit.material.color.set(0xffff00); // Muda cor ao atingir
+                setTimeout(() => {
+                    scene.remove(hit);
+                    targets.splice(targets.indexOf(hit), 1);
+                }, 100);
+            }
         });
-        document.addEventListener("keyup", (e) => keys[e.key] = false);
 
-        function updateRankingDisplay() {
-            leaderboardElement.innerHTML = highScores
-                .map((s, i) => `<li><span><span class="rank-pos">${i+1}º</span> ${s.date}</span> <b>${s.pts}</b></li>`)
-                .join("");
-        }
+        // --- Loop de Animação ---
+        let prevTime = performance.now();
+        function animate() {
+            requestAnimationFrame(animate);
 
-        function saveScore(finalScore) {
-            if (finalScore <= 0) return;
-            const date = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-            highScores.push({ pts: finalScore, date: date });
-            highScores.sort((a, b) => b.pts - a.pts);
-            highScores = highScores.slice(0, 5); // Mantém apenas os 5 melhores
-            localStorage.setItem("neonRacerScores", JSON.stringify(highScores));
-            updateRankingDisplay();
-        }
+            const time = performance.now();
+            if (controls.isLocked) {
+                const delta = (time - prevTime) / 1000;
 
-        function resetGame() {
-            carX = canvas.width / 2 - carWidth / 2;
-            obstacles = [];
-            particles = [];
-            score = 0;
-            obstacleSpeed = 5;
-            gameOver = false;
-            scoreElement.innerText = "0";
-            update();
-        }
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
 
-        function createExplosion(x, y, color) {
-            for(let i = 0; i < 20; i++) {
-                particles.push({
-                    x: x, y: y,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    life: 1, color: color
-                });
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
             }
+            prevTime = time;
+            renderer.render(scene, camera);
         }
 
-        function drawRoad() {
-            ctx.strokeStyle = "rgba(0, 255, 170, 0.2)";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(20, 0); ctx.lineTo(20, canvas.height);
-            ctx.moveTo(canvas.width - 20, 0); ctx.lineTo(canvas.width - 20, canvas.height);
-            ctx.stroke();
+        animate();
 
-            ctx.setLineDash([40, 40]);
-            ctx.lineDashOffset = -frameCount * obstacleSpeed;
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0);
-            ctx.lineTo(canvas.width / 2, canvas.height);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        function drawPlayer() {
-            ctx.save();
-            ctx.translate(carX + carWidth/2, carY + carHeight/2);
-            ctx.rotate(carTilt);
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "#0fa";
-            let grd = ctx.createLinearGradient(-carWidth/2, 0, carWidth/2, 0);
-            grd.addColorStop(0, "#0fa"); grd.addColorStop(0.5, "#068"); grd.addColorStop(1, "#0fa");
-            ctx.fillStyle = grd;
-            ctx.fillRect(-carWidth/2, -carHeight/2, carWidth, carHeight);
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(-carWidth/2 + 5, -carHeight/2, 10, 5);
-            ctx.fillRect(carWidth/2 - 15, -carHeight/2, 10, 5);
-            ctx.fillStyle = "rgba(0,0,0,0.6)";
-            ctx.fillRect(-carWidth/2 + 5, -carHeight/2 + 15, carWidth - 10, 25);
-            ctx.restore();
-        }
-
-        function update() {
-            if (gameOver) {
-                ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "#fff";
-                ctx.font = "bold 40px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText("CRASH!", canvas.width / 2, canvas.height / 2);
-                ctx.font = "20px Arial";
-                ctx.fillText("Espaço para Reiniciar", canvas.width / 2, canvas.height / 2 + 50);
-                return;
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            frameCount++;
-
-            if (keys["ArrowRight"] && carX < canvas.width - carWidth - 20) {
-                carX += carSpeed;
-                carTilt = Math.min(carTilt + 0.02, 0.1);
-            } else if (keys["ArrowLeft"] && carX > 20) {
-                carX -= carSpeed;
-                carTilt = Math.max(carTilt - 0.02, -0.1);
-            } else {
-                carTilt *= 0.9;
-            }
-
-            drawRoad();
-
-            if (frameCount % Math.max(20, 70 - Math.floor(score/2)) === 0) {
-                let xPos = 30 + Math.random() * (canvas.width - carWidth - 60);
-                obstacles.push({ x: xPos, y: -carHeight, w: carWidth, h: carHeight, color: "#f0a" });
-            }
-
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let o = obstacles[i];
-                o.y += obstacleSpeed;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = o.color;
-                ctx.fillStyle = o.color;
-                ctx.fillRect(o.x, o.y, o.w, o.h);
-                
-                if (carX < o.x + o.w - 5 && carX + carWidth > o.x + 5 &&
-                    carY < o.y + o.h - 5 && carY + carHeight > o.y + 5) {
-                    createExplosion(carX + carWidth/2, carY + 20, "#0fa");
-                    gameOver = true;
-                    saveScore(score); // SALVA A PONTUAÇÃO AO MORRER
-                }
-
-                if (o.y > canvas.height) {
-                    obstacles.splice(i, 1);
-                    score++;
-                    scoreElement.innerText = score;
-                    obstacleSpeed += 0.15;
-                }
-            }
-
-            particles.forEach((p, index) => {
-                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = Math.max(0, p.life);
-                ctx.fillRect(p.x, p.y, 4, 4);
-                if(p.life <= 0) particles.splice(index, 1);
-            });
-            ctx.globalAlpha = 1;
-
-            drawPlayer();
-            requestAnimationFrame(update);
-        }
-
-        // Inicializa o ranking ao carregar a página
-        updateRankingDisplay();
-        update();
+        // Ajuste de janela
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
