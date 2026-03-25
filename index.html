@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FPS Realista - Invasão</title>
+    <title>FPS Realista - Invasão com Ranking</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #crosshair {
@@ -24,23 +24,43 @@
             padding: 30px; text-align: center; border-radius: 10px;
             cursor: pointer; border: 2px solid #555; z-index: 10;
         }
+        #ui {
+            position: absolute;
+            top: 20px; left: 20px;
+            color: white; font-size: 24px;
+            text-shadow: 2px 2px 4px #000;
+            pointer-events: none;
+        }
         #damage-flash {
             position: absolute;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: red; opacity: 0; pointer-events: none;
             transition: opacity 0.1s;
         }
+        .ranking-list {
+            margin-top: 15px;
+            text-align: left;
+            font-size: 14px;
+            border-top: 1px solid #444;
+            padding-top: 10px;
+        }
     </style>
 </head>
 <body>
 
+    <div id="ui">Eliminações: <span id="score">0</span></div>
     <div id="damage-flash"></div>
     <div id="crosshair"></div>
     <div id="instructions">
         <h1>INVASÃO NPC</h1>
-        <p>Eles estão vindo atrás de você!</p>
         <p><strong>W, A, S, D</strong> para fugir | <strong>CLIQUE</strong> para eliminar</p>
-        <button style="padding: 10px 20px; cursor:pointer; margin-top:10px">JOGAR</button>
+        
+        <div class="ranking-list" id="ranking">
+            <strong>TOP RECORDES:</strong><br>
+            <div id="ranking-data">Carregando...</div>
+        </div>
+        
+        <button style="padding: 10px 20px; cursor:pointer; margin-top:15px; font-weight:bold">INICIAR MISSÃO</button>
     </div>
 
     <script type="importmap">
@@ -56,10 +76,34 @@
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
+        // --- Variáveis de Jogo ---
+        let score = 0;
+        const scoreEl = document.getElementById('score');
+        const rankingDataEl = document.getElementById('ranking-data');
+
+        // Carregar Ranking do LocalStorage
+        function updateRankingUI() {
+            const saves = JSON.parse(localStorage.getItem('fps_ranking') || '[]');
+            rankingDataEl.innerHTML = saves.length ? 
+                saves.map((s, i) => `${i+1}º - ${s} eliminações`).join('<br>') : 
+                "Nenhum recorde ainda.";
+        }
+        updateRankingUI();
+
+        function saveScore(finalScore) {
+            if(finalScore <= 0) return;
+            let saves = JSON.parse(localStorage.getItem('fps_ranking') || '[]');
+            saves.push(finalScore);
+            saves.sort((a, b) => b - a);
+            saves = saves.slice(0, 5); // Top 5
+            localStorage.setItem('fps_ranking', JSON.stringify(saves));
+            updateRankingUI();
+        }
+
         // --- Cena ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a0a0a);
-        scene.fog = new THREE.Fog(0x0a0a0a, 2, 50);
+        scene.background = new THREE.Color(0x020205);
+        scene.fog = new THREE.Fog(0x020205, 1, 45);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -67,37 +111,56 @@
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // --- Iluminação (Lanterna) ---
-        const lanterna = new THREE.SpotLight(0xffffff, 100);
-        lanterna.angle = Math.PI / 6;
-        lanterna.penumbra = 0.3;
+        // --- Iluminação Melhorada ---
+        // 1. Lanterna do Jogador
+        const lanterna = new THREE.SpotLight(0xffffff, 80);
+        lanterna.angle = Math.PI / 7;
+        lanterna.penumbra = 0.4;
         lanterna.castShadow = true;
         camera.add(lanterna);
-        lanterna.position.set(0, 0, 1);
-        lanterna.target.position.set(0, 0, -10);
+        lanterna.target.position.set(0, 0, -5);
         camera.add(lanterna.target);
         scene.add(camera);
 
-        const lightAmbient = new THREE.AmbientLight(0x111111, 0.5);
-        scene.add(lightAmbient);
+        // 2. Luz Ambiente (Luar fraco)
+        scene.add(new THREE.AmbientLight(0x111122, 0.4));
 
-        // --- CHÃO COM TEXTURA DE GRADE ---
-        const size = 200;
-        const divisions = 100;
-        const gridHelper = new THREE.GridHelper(size, divisions, 0x444444, 0x222222);
-        scene.add(gridHelper);
+        // 3. Postes de Luz Estratégicos
+        function createStreetLight(x, z) {
+            const group = new THREE.Group();
+            // Poste
+            const pole = new THREE.Mesh(new THREE.BoxGeometry(0.2, 5, 0.2), new THREE.MeshStandardMaterial({color: 0x111111}));
+            pole.position.y = 2.5;
+            // Lâmpada
+            const light = new THREE.PointLight(0xffaa22, 15, 15);
+            light.position.y = 5;
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({color: 0xffaa22}));
+            bulb.position.y = 5;
+            
+            group.add(pole, light, bulb);
+            group.position.set(x, 0, z);
+            scene.add(group);
+        }
+        createStreetLight(10, -10);
+        createStreetLight(-15, -25);
+        createStreetLight(5, -40);
 
-        const floorGeo = new THREE.PlaneGeometry(size, size);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
+        // --- Cenário ---
+        const grid = new THREE.GridHelper(200, 80, 0x222233, 0x111122);
+        scene.add(grid);
+
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(200, 200),
+            new THREE.MeshStandardMaterial({ color: 0x0a0a0a })
+        );
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
 
         // --- Arma ---
         const gunGroup = new THREE.Group();
-        const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.6), new THREE.MeshStandardMaterial({color: 0x050505}));
-        gunBody.position.set(0.35, -0.25, -0.5);
+        const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.7), new THREE.MeshStandardMaterial({color: 0x080808}));
+        gunBody.position.set(0.4, -0.3, -0.6);
         gunGroup.add(gunBody);
         camera.add(gunGroup);
 
@@ -105,10 +168,10 @@
         const npcList = [];
         const npcHitboxes = [];
 
-        function createEnemy(x, z) {
+        function spawnNPC() {
             const group = new THREE.Group();
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xddaa88 });
-            const clothesMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xc49a6c });
+            const clothesMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
 
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), skinMat);
             head.position.y = 1.6;
@@ -124,35 +187,42 @@
             const rArm = new THREE.Mesh(armGeo, skinMat); rArm.position.set(0.35, 1.2, 0);
 
             group.add(head, torso, lLeg, rLeg, lArm, rArm);
-            group.position.set(x, 0, z);
+            
+            // Spawn circular ao redor do player
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 10;
+            group.position.set(Math.cos(angle)*dist, 0, Math.sin(angle)*dist);
             scene.add(group);
 
             const hitbox = new THREE.Mesh(
-                new THREE.BoxGeometry(0.8, 2, 0.8), 
+                new THREE.BoxGeometry(1, 2.2, 1), 
                 new THREE.MeshBasicMaterial({ visible: false })
             );
-            hitbox.position.y = 1;
             scene.add(hitbox);
 
             npcList.push({ 
-                visual: group, 
-                hitbox: hitbox, 
-                lLeg: lLeg, rLeg: rLeg,
-                lArm: lArm, rArm: rArm,
-                speed: 0.04 + Math.random() * 0.05,
-                animStep: Math.random() * 10 
+                visual: group, hitbox, lLeg, rLeg, lArm, rArm,
+                speed: 0.05 + Math.random() * 0.06, animStep: Math.random() * 10 
             });
             npcHitboxes.push(hitbox);
         }
 
-        for(let i=0; i<15; i++) createEnemy(Math.random()*80-40, Math.random()*-80-10);
+        for(let i=0; i<10; i++) spawnNPC();
 
         // --- Controles ---
         const controls = new PointerLockControls(camera, document.body);
         const instructions = document.getElementById('instructions');
         instructions.addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => instructions.style.display = 'none');
-        controls.addEventListener('unlock', () => instructions.style.display = 'block');
+        
+        controls.addEventListener('lock', () => {
+            instructions.style.display = 'none';
+            score = 0; scoreEl.innerText = score;
+        });
+        
+        controls.addEventListener('unlock', () => {
+            instructions.style.display = 'block';
+            saveScore(score);
+        });
 
         let keys = {};
         document.addEventListener('keydown', (e) => keys[e.code] = true);
@@ -160,7 +230,7 @@
 
         document.addEventListener('mousedown', () => {
             if(!controls.isLocked) return;
-            gunGroup.position.z = 0.15; // Recuo
+            gunGroup.position.z = 0.2; 
             setTimeout(() => gunGroup.position.z = 0, 50);
 
             const raycaster = new THREE.Raycaster();
@@ -175,48 +245,41 @@
                     scene.remove(hit);
                     npcList.splice(index, 1);
                     npcHitboxes.splice(npcHitboxes.indexOf(hit), 1);
+                    score++;
+                    scoreEl.innerText = score;
+                    spawnNPC(); // Mantém o desafio constante
                 }
             }
         });
 
-        // --- Loop de Animação ---
+        // --- Loop Principal ---
         const flash = document.getElementById('damage-flash');
         
         function animate() {
             requestAnimationFrame(animate);
-            const time = Date.now() * 0.01;
-            
             if(controls.isLocked) {
-                // Movimento do Jogador
-                if(keys['KeyW']) controls.moveForward(0.12);
+                if(keys['KeyW']) controls.moveForward(0.13);
                 if(keys['KeyS']) controls.moveForward(-0.1);
                 if(keys['KeyA']) controls.moveRight(-0.1);
                 if(keys['KeyD']) controls.moveRight(0.1);
 
-                // IA e Movimento dos NPCs
                 npcList.forEach(npc => {
-                    // Direção
                     npc.visual.lookAt(camera.position.x, 0, camera.position.z);
                     const dir = new THREE.Vector3();
                     dir.subVectors(camera.position, npc.visual.position).normalize();
                     
                     npc.visual.position.x += dir.x * npc.speed;
                     npc.visual.position.z += dir.z * npc.speed;
-                    npc.hitbox.position.copy(npc.visual.position);
-                    npc.hitbox.position.y = 1;
+                    npc.hitbox.position.copy(npc.visual.position).y = 1;
 
-                    // Animação de Andar (Balanço de pernas e braços)
-                    npc.animStep += 0.2;
-                    const swing = Math.sin(npc.animStep) * 0.5;
-                    npc.lLeg.rotation.x = swing;
-                    npc.rLeg.rotation.x = -swing;
-                    npc.lArm.rotation.x = -swing;
-                    npc.rArm.rotation.x = swing;
-                    npc.visual.position.y = Math.abs(Math.cos(npc.animStep)) * 0.1; // "Pulo" leve ao correr
+                    npc.animStep += 0.22;
+                    const swing = Math.sin(npc.animStep) * 0.6;
+                    npc.lLeg.rotation.x = swing; npc.rLeg.rotation.x = -swing;
+                    npc.lArm.rotation.x = -swing; npc.rArm.rotation.x = swing;
+                    npc.visual.position.y = Math.abs(Math.cos(npc.animStep)) * 0.12;
 
-                    // Dano
                     if(npc.visual.position.distanceTo(camera.position) < 1.4) {
-                        flash.style.opacity = "0.4";
+                        flash.style.opacity = "0.5";
                         setTimeout(() => flash.style.opacity = "0", 50);
                     }
                 });
