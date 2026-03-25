@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FPS Realista - Sobrevivência</title>
+    <title>FPS Realista - Invasão</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #crosshair {
             position: absolute;
             top: 50%; left: 50%;
@@ -56,10 +56,10 @@
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        // --- Cena e Renderização ---
+        // --- Cena ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050505);
-        scene.fog = new THREE.Fog(0x050505, 5, 40);
+        scene.background = new THREE.Color(0x0a0a0a);
+        scene.fog = new THREE.Fog(0x0a0a0a, 2, 50);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -67,74 +67,85 @@
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // --- Iluminação ---
-        const light = new THREE.PointLight(0xffffff, 50, 100);
-        camera.add(light); // Luz acoplada à câmera (lanterna)
+        // --- Iluminação (Lanterna) ---
+        const lanterna = new THREE.SpotLight(0xffffff, 100);
+        lanterna.angle = Math.PI / 6;
+        lanterna.penumbra = 0.3;
+        lanterna.castShadow = true;
+        camera.add(lanterna);
+        lanterna.position.set(0, 0, 1);
+        lanterna.target.position.set(0, 0, -10);
+        camera.add(lanterna.target);
         scene.add(camera);
-        scene.add(new THREE.AmbientLight(0x111111));
 
-        // --- Chão ---
-        const floorGeo = new THREE.PlaneGeometry(200, 200);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        const lightAmbient = new THREE.AmbientLight(0x111111, 0.5);
+        scene.add(lightAmbient);
+
+        // --- CHÃO COM TEXTURA DE GRADE ---
+        const size = 200;
+        const divisions = 100;
+        const gridHelper = new THREE.GridHelper(size, divisions, 0x444444, 0x222222);
+        scene.add(gridHelper);
+
+        const floorGeo = new THREE.PlaneGeometry(size, size);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // --- Arma do Jogador (Visual) ---
+        // --- Arma ---
         const gunGroup = new THREE.Group();
-        const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.5), new THREE.MeshStandardMaterial({color: 0x111111}));
-        gunBody.position.set(0.3, -0.2, -0.4);
+        const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.6), new THREE.MeshStandardMaterial({color: 0x050505}));
+        gunBody.position.set(0.35, -0.25, -0.5);
         gunGroup.add(gunBody);
         camera.add(gunGroup);
 
-        // --- Gerenciamento de NPCs ---
+        // --- NPCs ---
         const npcList = [];
         const npcHitboxes = [];
 
         function createEnemy(x, z) {
             const group = new THREE.Group();
             const skinMat = new THREE.MeshStandardMaterial({ color: 0xddaa88 });
-            const clothesMat = new THREE.MeshStandardMaterial({ color: 0x222244 });
+            const clothesMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
 
-            // Corpo
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), skinMat);
             head.position.y = 1.6;
             const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), clothesMat);
             torso.position.y = 1.1;
             
-            // Pernas
             const legGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
             const lLeg = new THREE.Mesh(legGeo, clothesMat); lLeg.position.set(-0.15, 0.35, 0);
             const rLeg = new THREE.Mesh(legGeo, clothesMat); rLeg.position.set(0.15, 0.35, 0);
 
-            group.add(head, torso, lLeg, rLeg);
+            const armGeo = new THREE.BoxGeometry(0.15, 0.6, 0.15);
+            const lArm = new THREE.Mesh(armGeo, skinMat); lArm.position.set(-0.35, 1.2, 0);
+            const rArm = new THREE.Mesh(armGeo, skinMat); rArm.position.set(0.35, 1.2, 0);
 
-            // Braços em posição de ataque
-            const armGeo = new THREE.BoxGeometry(0.15, 0.5, 0.15);
-            const lArm = new THREE.Mesh(armGeo, skinMat); 
-            lArm.position.set(-0.35, 1.2, -0.2); 
-            lArm.rotation.x = -Math.PI/3; // Braço para frente
-            group.add(lArm);
-
+            group.add(head, torso, lLeg, rLeg, lArm, rArm);
             group.position.set(x, 0, z);
             scene.add(group);
 
-            // Hitbox para tiro
             const hitbox = new THREE.Mesh(
-                new THREE.BoxGeometry(0.8, 1.8, 0.8), 
+                new THREE.BoxGeometry(0.8, 2, 0.8), 
                 new THREE.MeshBasicMaterial({ visible: false })
             );
-            hitbox.position.copy(group.position);
-            hitbox.position.y = 0.9;
-            hitbox.userData.visual = group;
+            hitbox.position.y = 1;
             scene.add(hitbox);
 
-            npcList.push({ visual: group, hitbox: hitbox, speed: 0.03 + Math.random() * 0.04 });
+            npcList.push({ 
+                visual: group, 
+                hitbox: hitbox, 
+                lLeg: lLeg, rLeg: rLeg,
+                lArm: lArm, rArm: rArm,
+                speed: 0.04 + Math.random() * 0.05,
+                animStep: Math.random() * 10 
+            });
             npcHitboxes.push(hitbox);
         }
 
-        for(let i=0; i<12; i++) createEnemy(Math.random()*60-30, Math.random()*-60-10);
+        for(let i=0; i<15; i++) createEnemy(Math.random()*80-40, Math.random()*-80-10);
 
         // --- Controles ---
         const controls = new PointerLockControls(camera, document.body);
@@ -143,79 +154,75 @@
         controls.addEventListener('lock', () => instructions.style.display = 'none');
         controls.addEventListener('unlock', () => instructions.style.display = 'block');
 
-        let moveF = false, moveB = false, moveL = false, moveR = false;
-        document.addEventListener('keydown', (e) => {
-            if(e.code==='KeyW') moveF=true; if(e.code==='KeyS') moveB=true;
-            if(e.code==='KeyA') moveL=true; if(e.code==='KeyD') moveR=true;
-        });
-        document.addEventListener('keyup', (e) => {
-            if(e.code==='KeyW') moveF=false; if(e.code==='KeyS') moveB=false;
-            if(e.code==='KeyA') moveL=false; if(e.code==='KeyD') moveR=false;
-        });
+        let keys = {};
+        document.addEventListener('keydown', (e) => keys[e.code] = true);
+        document.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        // --- Atirar ---
-        const raycaster = new THREE.Raycaster();
         document.addEventListener('mousedown', () => {
             if(!controls.isLocked) return;
-
-            // Animação de coice da arma
-            gunGroup.position.z = 0.1;
+            gunGroup.position.z = 0.15; // Recuo
             setTimeout(() => gunGroup.position.z = 0, 50);
 
+            const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
             const hits = raycaster.intersectObjects(npcHitboxes);
             
             if(hits.length > 0) {
                 const hit = hits[0].object;
-                scene.remove(hit.userData.visual);
-                scene.remove(hit);
                 const index = npcList.findIndex(n => n.hitbox === hit);
-                if(index > -1) npcList.splice(index, 1);
-                npcHitboxes.splice(npcHitboxes.indexOf(hit), 1);
+                if(index > -1) {
+                    scene.remove(npcList[index].visual);
+                    scene.remove(hit);
+                    npcList.splice(index, 1);
+                    npcHitboxes.splice(npcHitboxes.indexOf(hit), 1);
+                }
             }
         });
 
-        // --- Loop de IA e Animação ---
+        // --- Loop de Animação ---
         const flash = document.getElementById('damage-flash');
         
         function animate() {
             requestAnimationFrame(animate);
+            const time = Date.now() * 0.01;
             
             if(controls.isLocked) {
-                // Movimento Jogador
-                if(moveF) controls.moveForward(0.15);
-                if(moveB) controls.moveForward(-0.1);
-                if(moveL) controls.moveRight(-0.1);
-                if(moveR) controls.moveRight(0.1);
+                // Movimento do Jogador
+                if(keys['KeyW']) controls.moveForward(0.12);
+                if(keys['KeyS']) controls.moveForward(-0.1);
+                if(keys['KeyA']) controls.moveRight(-0.1);
+                if(keys['KeyD']) controls.moveRight(0.1);
 
-                // IA dos NPCs
+                // IA e Movimento dos NPCs
                 npcList.forEach(npc => {
-                    // Olhar para o jogador (apenas no eixo Y)
+                    // Direção
                     npc.visual.lookAt(camera.position.x, 0, camera.position.z);
-                    
-                    // Mover em direção ao jogador
                     const dir = new THREE.Vector3();
                     dir.subVectors(camera.position, npc.visual.position).normalize();
                     
                     npc.visual.position.x += dir.x * npc.speed;
                     npc.visual.position.z += dir.z * npc.speed;
-                    
-                    // Atualizar hitbox
-                    npc.hitbox.position.x = npc.visual.position.x;
-                    npc.hitbox.position.z = npc.visual.position.z;
+                    npc.hitbox.position.copy(npc.visual.position);
+                    npc.hitbox.position.y = 1;
 
-                    // Detectar Dano (proximidade)
-                    const dist = npc.visual.position.distanceTo(camera.position);
-                    if(dist < 1.5) {
-                        flash.style.opacity = "0.5";
+                    // Animação de Andar (Balanço de pernas e braços)
+                    npc.animStep += 0.2;
+                    const swing = Math.sin(npc.animStep) * 0.5;
+                    npc.lLeg.rotation.x = swing;
+                    npc.rLeg.rotation.x = -swing;
+                    npc.lArm.rotation.x = -swing;
+                    npc.rArm.rotation.x = swing;
+                    npc.visual.position.y = Math.abs(Math.cos(npc.animStep)) * 0.1; // "Pulo" leve ao correr
+
+                    // Dano
+                    if(npc.visual.position.distanceTo(camera.position) < 1.4) {
+                        flash.style.opacity = "0.4";
                         setTimeout(() => flash.style.opacity = "0", 50);
                     }
                 });
             }
-
             renderer.render(scene, camera);
         }
-
         animate();
 
         window.addEventListener('resize', () => {
