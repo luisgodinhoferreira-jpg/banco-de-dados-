@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FPS Realista - Invasão com Ranking</title>
+    <title>FPS Realista - Invasão com Iluminação Avançada</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #crosshair {
@@ -52,7 +52,7 @@
     <div id="damage-flash"></div>
     <div id="crosshair"></div>
     <div id="instructions">
-        <h1>INVASÃO NPC</h1>
+        <h1>INVASÃO NOITE TOTAL</h1>
         <p><strong>W, A, S, D</strong> para fugir | <strong>CLIQUE</strong> para eliminar</p>
         
         <div class="ranking-list" id="ranking">
@@ -76,12 +76,10 @@
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        // --- Variáveis de Jogo ---
         let score = 0;
         const scoreEl = document.getElementById('score');
         const rankingDataEl = document.getElementById('ranking-data');
 
-        // Carregar Ranking do LocalStorage
         function updateRankingUI() {
             const saves = JSON.parse(localStorage.getItem('fps_ranking') || '[]');
             rankingDataEl.innerHTML = saves.length ? 
@@ -95,63 +93,78 @@
             let saves = JSON.parse(localStorage.getItem('fps_ranking') || '[]');
             saves.push(finalScore);
             saves.sort((a, b) => b - a);
-            saves = saves.slice(0, 5); // Top 5
+            saves = saves.slice(0, 5);
             localStorage.setItem('fps_ranking', JSON.stringify(saves));
             updateRankingUI();
         }
 
-        // --- Cena ---
+        // --- Configuração da Cena ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x020205);
-        scene.fog = new THREE.Fog(0x020205, 1, 45);
+        scene.background = new THREE.Color(0x010103);
+        scene.fog = new THREE.Fog(0x010103, 1, 55);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
         document.body.appendChild(renderer.domElement);
 
-        // --- Iluminação Melhorada ---
-        // 1. Lanterna do Jogador
-        const lanterna = new THREE.SpotLight(0xffffff, 80);
-        lanterna.angle = Math.PI / 7;
+        // --- ILUMINAÇÃO REFORMULADA ---
+
+        // 1. Lanterna do Jogador (Luz Spot)
+        const lanterna = new THREE.SpotLight(0xffffff, 100);
+        lanterna.angle = Math.PI / 6.5; // Mais fechada para parecer tática
         lanterna.penumbra = 0.4;
+        lanterna.distance = 40;
         lanterna.castShadow = true;
         camera.add(lanterna);
-        lanterna.target.position.set(0, 0, -5);
+        lanterna.target.position.set(0, 0, -10);
         camera.add(lanterna.target);
         scene.add(camera);
 
-        // 2. Luz Ambiente (Luar fraco)
-        scene.add(new THREE.AmbientLight(0x111122, 0.4));
+        // 2. Luz de Flash do Tiro (Muzzle Flash)
+        const muzzleFlash = new THREE.PointLight(0xffaa00, 0, 15);
+        muzzleFlash.position.set(0.4, -0.3, -1);
+        camera.add(muzzleFlash);
 
-        // 3. Postes de Luz Estratégicos
+        // 3. Luz Hemisférica (Dá cor às sombras - Azul Noite)
+        const ambientLight = new THREE.HemisphereLight(0x111122, 0x000000, 0.5);
+        scene.add(ambientLight);
+
+        // 4. Postes de Rua Dinâmicos
         function createStreetLight(x, z) {
             const group = new THREE.Group();
-            // Poste
-            const pole = new THREE.Mesh(new THREE.BoxGeometry(0.2, 5, 0.2), new THREE.MeshStandardMaterial({color: 0x111111}));
-            pole.position.y = 2.5;
-            // Lâmpada
-            const light = new THREE.PointLight(0xffaa22, 15, 15);
-            light.position.y = 5;
-            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({color: 0xffaa22}));
-            bulb.position.y = 5;
+            
+            // Poste físico
+            const pole = new THREE.Mesh(new THREE.BoxGeometry(0.2, 6, 0.2), new THREE.MeshStandardMaterial({color: 0x111111}));
+            pole.position.y = 3;
+            
+            // Lâmpada (Visual e Luz)
+            const light = new THREE.PointLight(0xffaa22, 25, 20);
+            light.position.y = 5.8;
+            light.castShadow = true;
+
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshBasicMaterial({color: 0xffaa22}));
+            bulb.position.y = 5.8;
             
             group.add(pole, light, bulb);
             group.position.set(x, 0, z);
             scene.add(group);
         }
-        createStreetLight(10, -10);
-        createStreetLight(-15, -25);
-        createStreetLight(5, -40);
+
+        // Espalhando postes estrategicamente
+        for(let x = -40; x <= 40; x += 40) {
+            for(let z = -40; z <= 40; z += 40) {
+                if(x === 0 && z === 0) continue;
+                createStreetLight(x, z);
+            }
+        }
 
         // --- Cenário ---
-        const grid = new THREE.GridHelper(200, 80, 0x222233, 0x111122);
-        scene.add(grid);
-
         const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(200, 200),
-            new THREE.MeshStandardMaterial({ color: 0x0a0a0a })
+            new THREE.PlaneGeometry(300, 300),
+            new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.8 })
         );
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
@@ -159,7 +172,7 @@
 
         // --- Arma ---
         const gunGroup = new THREE.Group();
-        const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.7), new THREE.MeshStandardMaterial({color: 0x080808}));
+        const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.7), new THREE.MeshStandardMaterial({color: 0x050505}));
         gunBody.position.set(0.4, -0.3, -0.6);
         gunGroup.add(gunBody);
         camera.add(gunGroup);
@@ -170,27 +183,25 @@
 
         function spawnNPC() {
             const group = new THREE.Group();
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xc49a6c });
-            const clothesMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0x332211 }); // Mais escuro para o clima
+            const clothesMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a });
 
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), skinMat);
             head.position.y = 1.6;
+            
+            // LUZ DOS OLHOS (Faz o NPC ser visível no escuro)
+            const eyeLight = new THREE.PointLight(0xff0000, 1.5, 3);
+            eyeLight.position.set(0, 1.65, -0.2);
+            group.add(eyeLight);
+
             const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), clothesMat);
             torso.position.y = 1.1;
-            
-            const legGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
-            const lLeg = new THREE.Mesh(legGeo, clothesMat); lLeg.position.set(-0.15, 0.35, 0);
-            const rLeg = new THREE.Mesh(legGeo, clothesMat); rLeg.position.set(0.15, 0.35, 0);
+            torso.castShadow = true;
 
-            const armGeo = new THREE.BoxGeometry(0.15, 0.6, 0.15);
-            const lArm = new THREE.Mesh(armGeo, skinMat); lArm.position.set(-0.35, 1.2, 0);
-            const rArm = new THREE.Mesh(armGeo, skinMat); rArm.position.set(0.35, 1.2, 0);
-
-            group.add(head, torso, lLeg, rLeg, lArm, rArm);
+            group.add(head, torso);
             
-            // Spawn circular ao redor do player
             const angle = Math.random() * Math.PI * 2;
-            const dist = 30 + Math.random() * 10;
+            const dist = 35 + Math.random() * 10;
             group.position.set(Math.cos(angle)*dist, 0, Math.sin(angle)*dist);
             scene.add(group);
 
@@ -201,28 +212,21 @@
             scene.add(hitbox);
 
             npcList.push({ 
-                visual: group, hitbox, lLeg, rLeg, lArm, rArm,
+                visual: group, hitbox,
                 speed: 0.05 + Math.random() * 0.06, animStep: Math.random() * 10 
             });
             npcHitboxes.push(hitbox);
         }
 
-        for(let i=0; i<10; i++) spawnNPC();
+        for(let i=0; i<12; i++) spawnNPC();
 
-        // --- Controles ---
+        // --- Controles e Ações ---
         const controls = new PointerLockControls(camera, document.body);
         const instructions = document.getElementById('instructions');
         instructions.addEventListener('click', () => controls.lock());
         
-        controls.addEventListener('lock', () => {
-            instructions.style.display = 'none';
-            score = 0; scoreEl.innerText = score;
-        });
-        
-        controls.addEventListener('unlock', () => {
-            instructions.style.display = 'block';
-            saveScore(score);
-        });
+        controls.addEventListener('lock', () => { instructions.style.display = 'none'; score = 0; scoreEl.innerText = score; });
+        controls.addEventListener('unlock', () => { instructions.style.display = 'block'; saveScore(score); });
 
         let keys = {};
         document.addEventListener('keydown', (e) => keys[e.code] = true);
@@ -230,8 +234,11 @@
 
         document.addEventListener('mousedown', () => {
             if(!controls.isLocked) return;
-            gunGroup.position.z = 0.2; 
-            setTimeout(() => gunGroup.position.z = 0, 50);
+            
+            // Efeito de Clarão do Tiro
+            muzzleFlash.intensity = 50;
+            gunGroup.position.z = 0.15;
+            setTimeout(() => { muzzleFlash.intensity = 0; gunGroup.position.z = 0; }, 50);
 
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
@@ -247,18 +254,15 @@
                     npcHitboxes.splice(npcHitboxes.indexOf(hit), 1);
                     score++;
                     scoreEl.innerText = score;
-                    spawnNPC(); // Mantém o desafio constante
+                    spawnNPC();
                 }
             }
         });
 
-        // --- Loop Principal ---
-        const flash = document.getElementById('damage-flash');
-        
         function animate() {
             requestAnimationFrame(animate);
             if(controls.isLocked) {
-                if(keys['KeyW']) controls.moveForward(0.13);
+                if(keys['KeyW']) controls.moveForward(0.12);
                 if(keys['KeyS']) controls.moveForward(-0.1);
                 if(keys['KeyA']) controls.moveRight(-0.1);
                 if(keys['KeyD']) controls.moveRight(0.1);
@@ -267,18 +271,12 @@
                     npc.visual.lookAt(camera.position.x, 0, camera.position.z);
                     const dir = new THREE.Vector3();
                     dir.subVectors(camera.position, npc.visual.position).normalize();
-                    
                     npc.visual.position.x += dir.x * npc.speed;
                     npc.visual.position.z += dir.z * npc.speed;
                     npc.hitbox.position.copy(npc.visual.position).y = 1;
 
-                    npc.animStep += 0.22;
-                    const swing = Math.sin(npc.animStep) * 0.6;
-                    npc.lLeg.rotation.x = swing; npc.rLeg.rotation.x = -swing;
-                    npc.lArm.rotation.x = -swing; npc.rArm.rotation.x = swing;
-                    npc.visual.position.y = Math.abs(Math.cos(npc.animStep)) * 0.12;
-
-                    if(npc.visual.position.distanceTo(camera.position) < 1.4) {
+                    if(npc.visual.position.distanceTo(camera.position) < 1.5) {
+                        const flash = document.getElementById('damage-flash');
                         flash.style.opacity = "0.5";
                         setTimeout(() => flash.style.opacity = "0", 50);
                     }
