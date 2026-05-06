@@ -3,102 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimal Invasion Pro</title>
+    <title>Toy Gun FPS - Minimalista</title>
     <style>
-        :root { --primary: #ff4444; --bg: #ffffff; --text: #1a1a1a; }
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); }
-        
+        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background: #fff; }
         #ui {
             position: absolute; top: 20px; left: 20px;
-            color: var(--text); pointer-events: none; z-index: 5;
+            color: #333; font-size: 24px; font-weight: bold; pointer-events: none;
         }
-        .stat-box { font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-bottom: 5px; }
-        
-        #health-bar-container {
-            width: 200px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden;
-        }
-        #health-bar { width: 100%; height: 100%; background: var(--primary); transition: width 0.3s; }
-
         #crosshair {
             position: absolute; top: 50%; left: 50%;
-            width: 4px; height: 4px; background: var(--text);
+            width: 10px; height: 10px; border: 2px solid #333;
             border-radius: 50%; transform: translate(-50%, -50%);
-            pointer-events: none; mix-blend-mode: difference;
+            pointer-events: none;
         }
-
         #instructions {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             background: rgba(255,255,255,0.9); z-index: 10; text-align: center;
         }
-
-        .card {
-            background: white; padding: 40px; border-radius: 20px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.1); max-width: 400px;
-        }
-
-        button {
-            padding: 15px 40px; font-size: 18px; font-weight: bold;
-            background: var(--text); color: white; border: none;
-            border-radius: 50px; cursor: pointer; transition: 0.2s;
-        }
-        button:hover { transform: scale(1.05); background: var(--primary); }
-
-        #damage-flash {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--primary); opacity: 0; pointer-events: none; z-index: 4;
+        .btn-start {
+            padding: 15px 30px; font-size: 20px; cursor: pointer;
+            background: #2196F3; color: white; border: none; border-radius: 10px;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div class="stat-box">KILLS: <span id="score">0</span></div>
-        <div id="health-bar-container"><div id="health-bar"></div></div>
-    </div>
-
-    <div id="damage-flash"></div>
+    <div id="ui">PONTOS: <span id="score">0</span></div>
     <div id="crosshair"></div>
 
     <div id="instructions">
-        <div class="card">
-            <h1 id="msg-title">MINIMAL INVASION</h1>
-            <p>Os inimigos são rápidos. Não deixe que eles te toquem.</p>
-            <div id="ranking" style="margin: 20px 0; font-size: 14px; color: #666;"></div>
-            <button id="start-btn">INICIAR PROTOCOLO</button>
+        <div>
+            <h1>TOY GUN INVASION</h1>
+            <p>Use a arma de brinquedo para eliminar os alvos vermelhos!</p>
+            <button class="btn-start" id="startBtn">CLIQUE PARA JOGAR</button>
         </div>
     </div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
-
     <script type="module">
-        import * as THREE from 'three';
-        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
+        import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/PointerLockControls.js';
 
-        // --- Configurações de Jogo ---
-        let score = 0;
-        let health = 100;
-        let isGameOver = false;
-        const npcList = [];
-        const particles = [];
-        
-        // Elementos DOM
-        const scoreEl = document.getElementById('score');
-        const healthBar = document.getElementById('health-bar');
-        const instructions = document.getElementById('instructions');
-        const msgTitle = document.getElementById('msg-title');
-
-        // --- Engine Three.js ---
+        // --- Configurações Básicas ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
-        scene.fog = new THREE.Fog(0xffffff, 15, 45);
+        scene.fog = new THREE.Fog(0xffffff, 10, 50);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -106,191 +55,125 @@
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // Iluminação
-        const ambient = new THREE.HemisphereLight(0xffffff, 0xbbbbbb, 1);
-        scene.add(ambient);
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(5, 15, 5);
+        // Luzes
+        const light = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
+        scene.add(light);
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+        sun.position.set(5, 10, 5);
         sun.castShadow = true;
         scene.add(sun);
 
-        // Chão
+        // Chão com Grid
         const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(1000, 1000),
-            new THREE.MeshStandardMaterial({ color: 0xfafafa })
+            new THREE.PlaneGeometry(200, 200),
+            new THREE.MeshStandardMaterial({ color: 0xeeeeee })
         );
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
+        scene.add(new THREE.GridHelper(100, 40, 0xcccccc, 0xdddddd));
 
-        // --- Arma e Movimento Suave ---
-        const gunGroup = new THREE.Group();
-        const gunVisual = new THREE.Mesh(
-            new THREE.BoxGeometry(0.12, 0.18, 0.7),
-            new THREE.MeshStandardMaterial({ color: 0x1a1a1a })
+        // --- CONSTRUINDO A ARMA DE BRINQUEDO ---
+        const toyGun = new THREE.Group();
+
+        // Corpo da arma (Azul)
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(0.15, 0.25, 0.6),
+            new THREE.MeshStandardMaterial({ color: 0x2196F3 })
         );
-        gunVisual.position.set(0.35, -0.3, -0.5);
-        gunGroup.add(gunVisual);
-        camera.add(gunGroup);
+        
+        // Ponta da arma (Laranja de segurança)
+        const tip = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.05, 0.05, 0.1, 16),
+            new THREE.MeshStandardMaterial({ color: 0xFF9800 })
+        );
+        tip.rotation.x = Math.PI / 2;
+        tip.position.z = -0.35;
+
+        // Detalhe/Pente (Amarelo)
+        const detail = new THREE.Mesh(
+            new THREE.BoxGeometry(0.1, 0.15, 0.2),
+            new THREE.MeshStandardMaterial({ color: 0xFFEB3B })
+        );
+        detail.position.y = -0.15;
+        detail.position.z = -0.05;
+
+        toyGun.add(body, tip, detail);
+        toyGun.position.set(0.4, -0.4, -0.6); // Posição na mão
+        camera.add(toyGun);
         scene.add(camera);
 
+        // --- Alvos e NPCs ---
+        const targets = [];
+        function spawnTarget() {
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(0.8, 1.6, 0.4),
+                new THREE.MeshStandardMaterial({ color: 0xff4444 })
+            );
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 15 + Math.random() * 10;
+            mesh.position.set(Math.cos(angle)*dist, 0.8, Math.sin(angle)*dist);
+            mesh.castShadow = true;
+            scene.add(mesh);
+            targets.push(mesh);
+        }
+        for(let i=0; i<5; i++) spawnTarget();
+
+        // --- Controles ---
         const controls = new PointerLockControls(camera, document.body);
-        document.getElementById('start-btn').addEventListener('click', () => {
-            if (isGameOver) location.reload();
-            controls.lock();
+        const startBtn = document.getElementById('startBtn');
+        const scoreEl = document.getElementById('score');
+        let score = 0;
+
+        startBtn.addEventListener('click', () => controls.lock());
+        controls.addEventListener('lock', () => document.getElementById('instructions').style.display = 'none');
+        controls.addEventListener('unlock', () => document.getElementById('instructions').style.display = 'flex');
+
+        // Tiro
+        window.addEventListener('mousedown', () => {
+            if(!controls.isLocked) return;
+
+            // Animação de "Recuo" de brinquedo
+            toyGun.position.z = -0.5;
+            setTimeout(() => toyGun.position.z = -0.6, 50);
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+            const intersects = raycaster.intersectObjects(targets);
+
+            if(intersects.length > 0) {
+                const object = intersects[0].object;
+                scene.remove(object);
+                targets.splice(targets.indexOf(object), 1);
+                score++;
+                scoreEl.innerText = score;
+                spawnTarget();
+            }
         });
 
-        controls.addEventListener('lock', () => instructions.style.display = 'none');
-        controls.addEventListener('unlock', () => { if(!isGameOver) instructions.style.display = 'flex'; });
-
-        // --- Lógica de NPCs ---
-        function spawnNPC() {
-            const group = new THREE.Group();
-            const mat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
-            
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.3), mat);
-            body.position.y = 0.7;
-            body.castShadow = true;
-            
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), mat);
-            head.position.y = 1.65;
-            
-            group.add(body, head);
-            
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 25 + Math.random() * 10;
-            group.position.set(Math.cos(angle)*dist, 0, Math.sin(angle)*dist);
-            
-            scene.add(group);
-            npcList.push({ 
-                mesh: group, 
-                speed: 0.08 + (score * 0.002), 
-                hitRadius: 0.8 
-            });
-        }
-
-        function createExplosion(pos) {
-            for(let i=0; i<6; i++) {
-                const p = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.2, 0.2, 0.2),
-                    new THREE.MeshStandardMaterial({ color: 0xff4444 })
-                );
-                p.position.copy(pos);
-                p.position.y += Math.random() * 2;
-                const vel = new THREE.Vector3(
-                    (Math.random()-0.5)*0.2,
-                    Math.random()*0.2,
-                    (Math.random()-0.5)*0.2
-                );
-                particles.push({ mesh: p, vel, life: 1.0 });
-                scene.add(p);
-            }
-        }
-
-        // --- Inputs ---
-        let keys = {};
+        // Movimentação
+        const keys = {};
         document.addEventListener('keydown', (e) => keys[e.code] = true);
         document.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        window.addEventListener('mousedown', () => {
-            if(!controls.isLocked || isGameOver) return;
-
-            // Recuo visual
-            gunVisual.position.z = -0.3;
-            
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
-            
-            const hitNPCIndex = npcList.findIndex(npc => {
-                const dist = raycaster.ray.distanceToPoint(npc.mesh.position);
-                return dist < npc.hitRadius && raycaster.ray.direction.dot(npc.mesh.position.clone().sub(camera.position)) > 0;
-            });
-
-            if(hitNPCIndex !== -1) {
-                const npc = npcList[hitNPCIndex];
-                createExplosion(npc.mesh.position);
-                scene.remove(npc.mesh);
-                npcList.splice(hitNPCIndex, 1);
-                score++;
-                scoreEl.innerText = score;
-                spawnNPC();
-            }
-        });
-
-        // --- Loop Principal ---
-        let clock = new THREE.Clock();
-
         function animate() {
             requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-            const time = clock.getElapsedTime();
-
-            if(controls.isLocked && !isGameOver) {
-                // Movimento
-                if(keys['KeyW']) controls.moveForward(0.15);
+            if(controls.isLocked) {
+                if(keys['KeyW']) controls.moveForward(0.1);
                 if(keys['KeyS']) controls.moveForward(-0.1);
                 if(keys['KeyA']) controls.moveRight(-0.1);
                 if(keys['KeyD']) controls.moveRight(0.1);
 
-                // Efeito de "Balanço" da arma (Gun Sway)
-                const moveSpeed = (keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD']) ? 1 : 0;
-                gunGroup.position.y = Math.sin(time * 10) * 0.015 * moveSpeed;
-                gunGroup.position.x = Math.cos(time * 5) * 0.01 * moveSpeed;
-                gunVisual.position.z = THREE.MathUtils.lerp(gunVisual.position.z, -0.5, 0.1);
-
-                // Atualizar NPCs
-                npcList.forEach((npc, index) => {
-                    npc.mesh.lookAt(camera.position.x, 0, camera.position.z);
-                    const dir = new THREE.Vector3().subVectors(camera.position, npc.mesh.position).normalize();
-                    npc.mesh.position.add(dir.multiplyScalar(npc.speed));
-
-                    // Dano
-                    if(npc.mesh.position.distanceTo(camera.position) < 1.5) {
-                        takeDamage(0.5);
-                    }
-                });
-            }
-
-            // Partículas
-            particles.forEach((p, i) => {
-                p.mesh.position.add(p.vel);
-                p.vel.y -= 0.01; // Gravidade
-                p.life -= 0.02;
-                p.mesh.scale.setScalar(p.life);
-                if(p.life <= 0) {
-                    scene.remove(p.mesh);
-                    particles.splice(i, 1);
+                // Animação suave da arma ao andar
+                const time = Date.now() * 0.005;
+                if(keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD']) {
+                    toyGun.position.y = -0.4 + Math.sin(time * 2) * 0.01;
                 }
-            });
-
+            }
             renderer.render(scene, camera);
         }
-
-        function takeDamage(amt) {
-            health -= amt;
-            healthBar.style.width = `${health}%`;
-            document.getElementById('damage-flash').style.opacity = 0.3;
-            setTimeout(() => { document.getElementById('damage-flash').style.opacity = 0; }, 50);
-
-            if(health <= 0 && !isGameOver) {
-                gameOver();
-            }
-        }
-
-        function gameOver() {
-            isGameOver = true;
-            controls.unlock();
-            msgTitle.innerText = "SISTEMA CORROMPIDO";
-            msgTitle.style.color = "var(--primary)";
-            document.getElementById('start-btn').innerText = "REINICIAR";
-            instructions.style.display = 'flex';
-        }
-
-        // Inicialização
-        for(let i=0; i<6; i++) spawnNPC();
         animate();
 
-        // Resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
