@@ -1,19 +1,266 @@
-<script>
-    document.getElementById('cadastroForm').addEventListener('submit', function(event) {
-        // 1. Impede o formulário de recarregar a página
-        event.preventDefault();
 
-        // 2. Coleta o nome para personalizar a mensagem (opcional)
-        const nome = document.getElementById('nome').value;
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPS Minimalista - Fundo Branco</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #fff; }
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 12px; height: 12px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        #instructions {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #333; background: rgba(255,255,255,0.95);
+            padding: 30px; text-align: center; border-radius: 10px;
+            cursor: pointer; border: 2px solid #eee; z-index: 10;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        #ui {
+            position: absolute;
+            top: 20px; left: 20px;
+            color: #333; font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        #damage-flash {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(255, 0, 0, 0.3); opacity: 0; pointer-events: none;
+            transition: opacity 0.1s;
+        }
+        .ranking-list {
+            margin-top: 15px;
+            text-align: left;
+            font-size: 14px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        button {
+            padding: 10px 20px; cursor:pointer; margin-top:15px; 
+            font-weight:bold; background: #333; color: white; border: none; border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
 
-        // 3. Substitui o conteúdo do formulário pela mensagem de sucesso
-        this.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <div style="font-size: 50px; color: #4CAF50; margin-bottom: 20px;">✔</div>
-                <h2 style="color: #333;">Cadastro realizado!</h2>
-                <p style="color: #666;">O cliente <strong>${nome}</strong> foi registrado com sucesso no sistema.</p>
-                <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer; border: none; background: #007BFF; color: white; border-radius: 5px;">Novo Cadastro</button>
-            </div>
-        `;
-    });
-</script>
+    <div id="ui">SCORE: <span id="score">0</span></div>
+    <div id="damage-flash"></div>
+    <div id="crosshair"></div>
+    <div id="instructions">
+        <h1>MINIMAL INVASION</h1>
+        <p><strong>W, A, S, D</strong> para mover | <strong>CLIQUE</strong> para eliminar</p>
+        
+        <div class="ranking-list" id="ranking">
+            <strong>RECORDES:</strong><br>
+            <div id="ranking-data">Carregando...</div>
+        </div>
+        
+        <button>INICIAR TESTE</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+        let score = 0;
+        const scoreEl = document.getElementById('score');
+        const rankingDataEl = document.getElementById('ranking-data');
+
+        function updateRankingUI() {
+            const saves = JSON.parse(localStorage.getItem('fps_ranking_white') || '[]');
+            rankingDataEl.innerHTML = saves.length ? 
+                saves.map((s, i) => `${i+1}º - ${s} pts`).join('<br>') : 
+                "Nenhum registro.";
+        }
+        updateRankingUI();
+
+        function saveScore(finalScore) {
+            if(finalScore <= 0) return;
+            let saves = JSON.parse(localStorage.getItem('fps_ranking_white') || '[]');
+            saves.push(finalScore);
+            saves.sort((a, b) => b - a);
+            saves = saves.slice(0, 5);
+            localStorage.setItem('fps_ranking_white', JSON.stringify(saves));
+            updateRankingUI();
+        }
+
+        // --- Cena ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff); // FUNDO BRANCO
+        scene.fog = new THREE.Fog(0xffffff, 10, 60);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // --- ILUMINAÇÃO AMBIENTE (ESTILO ESTÚDIO) ---
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xaaaaaa, 1.2);
+        scene.add(hemiLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        sunLight.position.set(10, 20, 10);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        scene.add(sunLight);
+
+        // --- Cenário ---
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(500, 500),
+            new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 1 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Adicionar grid sutil
+        const grid = new THREE.GridHelper(100, 50, 0xdddddd, 0xeeeeee);
+        grid.position.y = 0.01;
+        scene.add(grid);
+
+        // --- Arma Minimalista ---
+        const gunGroup = new THREE.Group();
+        const gunBody = new THREE.Mesh(
+            new THREE.BoxGeometry(0.15, 0.2, 0.8), 
+            new THREE.MeshStandardMaterial({color: 0x333333})
+        );
+        gunBody.position.set(0.4, -0.4, -0.7);
+        gunGroup.add(gunBody);
+        camera.add(gunGroup);
+        scene.add(camera);
+
+        // --- NPCs ---
+        const npcList = [];
+        const npcHitboxes = [];
+
+        function spawnNPC() {
+            const group = new THREE.Group();
+            // Inimigos vermelhos para contrastar com o branco
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff4444 }); 
+
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), bodyMat);
+            head.position.y = 1.7;
+            head.castShadow = true;
+            
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.3), bodyMat);
+            torso.position.y = 1.05;
+            torso.castShadow = true;
+
+            group.add(head, torso);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 15;
+            group.position.set(Math.cos(angle)*dist, 0, Math.sin(angle)*dist);
+            scene.add(group);
+
+            const hitbox = new THREE.Mesh(
+                new THREE.BoxGeometry(1.2, 2.5, 1.2), 
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            scene.add(hitbox);
+
+            npcList.push({ 
+                visual: group, hitbox,
+                speed: 0.07 + Math.random() * 0.05
+            });
+            npcHitboxes.push(hitbox);
+        }
+
+        for(let i=0; i<8; i++) spawnNPC();
+
+        // --- Controles ---
+        const controls = new PointerLockControls(camera, document.body);
+        const instructions = document.getElementById('instructions');
+        instructions.addEventListener('click', () => controls.lock());
+        
+        controls.addEventListener('lock', () => { instructions.style.display = 'none'; score = 0; scoreEl.innerText = score; });
+        controls.addEventListener('unlock', () => { instructions.style.display = 'block'; saveScore(score); });
+
+        let keys = {};
+        document.addEventListener('keydown', (e) => keys[e.code] = true);
+        document.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        document.addEventListener('mousedown', () => {
+            if(!controls.isLocked) return;
+            
+            // Recuo da arma
+            gunGroup.position.y = 0.05;
+            setTimeout(() => { gunGroup.position.y = 0; }, 50);
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+            const hits = raycaster.intersectObjects(npcHitboxes);
+            
+            if(hits.length > 0) {
+                const hit = hits[0].object;
+                const index = npcList.findIndex(n => n.hitbox === hit);
+                if(index > -1) {
+                    scene.remove(npcList[index].visual);
+                    scene.remove(hit);
+                    npcList.splice(index, 1);
+                    npcHitboxes.splice(npcHitboxes.indexOf(hit), 1);
+                    score++;
+                    scoreEl.innerText = score;
+                    spawnNPC();
+                }
+            }
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(controls.isLocked) {
+                if(keys['KeyW']) controls.moveForward(0.15);
+                if(keys['KeyS']) controls.moveForward(-0.1);
+                if(keys['KeyA']) controls.moveRight(-0.1);
+                if(keys['KeyD']) controls.moveRight(0.1);
+
+                npcList.forEach(npc => {
+                    npc.visual.lookAt(camera.position.x, 0, camera.position.z);
+                    const dir = new THREE.Vector3();
+                    dir.subVectors(camera.position, npc.visual.position).normalize();
+                    npc.visual.position.x += dir.x * npc.speed;
+                    npc.visual.position.z += dir.z * npc.speed;
+                    npc.hitbox.position.copy(npc.visual.position).y = 1;
+
+                    // Colisão (Dano)
+                    if(npc.visual.position.distanceTo(camera.position) < 1.8) {
+                        const flash = document.getElementById('damage-flash');
+                        flash.style.opacity = "1";
+                        setTimeout(() => flash.style.opacity = "0", 100);
+                    }
+                });
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
